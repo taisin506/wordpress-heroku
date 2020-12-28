@@ -21,7 +21,7 @@
 	);
 
 	if ( ! empty( $s_status ) ) {
-		$s_args['meta_key']   = 'wp_manga_status';
+		$s_args['meta_key']   = '_wp_manga_status';
 		$s_args['meta_value'] = $s_status;
 	}
 

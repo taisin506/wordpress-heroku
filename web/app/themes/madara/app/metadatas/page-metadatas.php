@@ -11,6 +11,7 @@
 
 	if ( ! function_exists( 'madara_page_MetaBoxes' ) ) {
 		function madara_page_MetaBoxes() {
+			
 			$page_meta_boxes = array(
 				'id'       => 'page_meta_box',
 				'title'    => esc_html__( 'Page Settings', 'madara' ),
@@ -51,6 +52,16 @@
 					),
 				)
 			);
+			
+			global $wp_manga_post_type;
+			$manga_status_choices = array();
+			if(isset($wp_manga_post_type) && method_exists($wp_manga_post_type,'get_manga_status')){
+				$manga_status = $wp_manga_post_type->get_manga_status();
+				$manga_status_choices = array(array('value' => '', 'label' => esc_html__( 'All', 'madara' )));
+				foreach($manga_status as $key => $value){
+					array_push($manga_status_choices, array('value' => $key, 'label' => $value));
+				}
+			}
 
 			$front_page_meta_boxes = array(
 				'id'       => 'frontpage_meta_box',
@@ -225,6 +236,32 @@
 						),
 						'condition' => 'page_content:not(page_content)',
 					),
+					
+					array(
+						'id'        => 'manga_status',
+						'label'     => esc_html__( 'Manga Status', 'madara' ),
+						'desc'      => esc_html__( 'Filter by manga status', 'madara' ),
+						'type'      => 'select',
+						'choices'   => $manga_status_choices,
+						'condition' => 'page_content:is(manga)',
+					),
+					
+					array(
+						'id'        => 'manga_tags',
+						'label'     => esc_html__( 'Manga Tags', 'madara' ),
+						'desc'      => esc_html__( 'Enter manga tags to get mangs from, separated by a comma', 'madara' ),
+						'std'       => '',
+						'type'      => 'text',
+						'condition' => 'page_content:is(manga)',
+					),
+					array(
+						'id'        => 'manga_genres',
+						'label'     => esc_html__( 'Manga Genres', 'madara' ),
+						'desc'      => esc_html__( 'Enter manga genres to get mangs from, separated by a comma', 'madara' ),
+						'std'       => '',
+						'type'      => 'text',
+						'condition' => 'page_content:is(manga)',
+					),
 					array(
 						'id'        => 'page_post_count',
 						'label'     => esc_html__( 'Post Count', 'madara' ),
@@ -285,25 +322,41 @@
 						'choices'   => array(
 							array(
 								'value' => 'latest',
-								'label' => esc_html__( 'New Post', 'madara' ),
-								'src'   => ''
+								'label' => esc_html__( 'New Post', 'madara' )
 							),
 							array(
 								'value' => 'modified',
-								'label' => esc_html__( 'Latest Update', 'madara' ),
-								'src'   => ''
+								'label' => esc_html__( 'Latest Update (or New Manga Chapter)', 'madara' )
 							),
 							array(
 								'value' => 'name',
-								'label' => esc_html__( 'Post Title', 'madara' ),
-								'src'   => ''
+								'label' => esc_html__( 'Name', 'madara' )
 							),
 							array(
 								'value' => 'rand',
-								'label' => esc_html__( 'Random', 'madara' ),
-								'src'   => ''
+								'label' => esc_html__( 'Random', 'madara' )
+							),array(
+								'value' => 'rating',
+								'label' => esc_html__( 'Rating', 'madara' )
+							),
+							array(
+								'value' => 'trending',
+								'label' => esc_html__( 'Trending', 'madara' )
+							),
+							array(
+								'value' => 'views',
+								'label' => esc_html__( 'All Time Views', 'madara' )
 							)
 						)
+					),
+					
+					array(
+						'id'    => 'manga_filter_by_characters',
+						'label' => esc_html__( 'Filter Mangas by title\' first character', 'madara' ),
+						'desc'  => esc_html__( 'Show the Characters Filter Bar to filter Mangas by title\' first character', 'madara' ),
+						'std'   => 'on',
+						'type'  => 'on-off',
+						'condition' => 'page_post_orderby:is(name)',
 					),
 
 
@@ -826,6 +879,28 @@
 						'type'      => 'spacing',
 						'condition' => 'custom_sidebar_settings:is(on)'
 					),
+					/*
+					 * Other Settings
+					 * */
+					array(
+						'label' => esc_html__( 'Other Settings', 'madara' ),
+						'id'    => 'page_settings',
+						'type'  => 'tab'
+					),
+					array(
+						'id'      => 'page_title',
+						'label'   => esc_html__( 'Page Title', 'madara' ),
+						'desc'    => esc_html__('Turn on/off Page Title', 'madara'),
+						'std'     => 'on',
+						'type'    => 'on-off'
+						),
+					array(
+						'id'      => 'page_meta_tags',
+						'label'   => esc_html__( 'Page Meta', 'madara' ),
+						'desc'    => esc_html__('Turn on/off Page Meta including published datetime', 'madara'),
+						'std'     => 'on',
+						'type'    => 'on-off'
+						)
 
 				)
 			);

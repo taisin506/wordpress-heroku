@@ -1,3 +1,13 @@
+function attach_event_multi_select_chapters(){
+	jQuery('.vol_select_all').each(function(){
+		jQuery(this).on('change', function(){
+			var is_check = jQuery(this).is(":checked");
+			var vol_id = jQuery(this).val();
+			jQuery('.chapter_vol_' + vol_id).prop('checked', is_check);
+		});
+	});
+}	
+	
 jQuery(document).ready(function ($) {
 
 	//bring to tabs
@@ -19,6 +29,29 @@ jQuery(document).ready(function ($) {
 
 	$('.wp-manga-content h2').removeClass('ui-sortable-handle');
 	$('.wp-manga-content h2').removeClass('hndle');
+	
+	$('#volumes-list').sortable({
+		stop: function(evt, ui){
+				// save volumes order
+				var vols = [];
+				$('#volumes-list > li').each(function(idx){
+					var vol_id = $(this).data('volume-id');
+					vols.push({'id': vol_id, 'index': idx});
+				});
+				
+				$.ajax({
+					url: wpManga.ajax_url,
+					type: 'POST',
+					data: {
+						action: 'wp_manga_save_volumes_order',
+						vols: vols
+					},
+					complete: function (res) {
+						// do nothing
+					}
+				});
+		}
+	});
 
 	//save manga type
 	$(document).on('click', 'input[name="wp-manga-chapter-type"]', function () {
@@ -36,6 +69,8 @@ jQuery(document).ready(function ($) {
 
 		var label = $('span.wp-manga-chapter-type-label');
 		label.addClass(chapterType);
+		
+		$('#manga-information-metabox').addClass(chapterType);
 
 		chapterTypeLabel = chapterType == 'manga' ? 'image' : chapterType;
 		label.text(chapterTypeLabel);
@@ -159,39 +194,48 @@ jQuery(document).ready(function ($) {
 		var chapterID         = $('#wp-manga-modal-chapter').val();
 		var chapterNewName    = $('#wp-manga-modal-chapter-name').val();
 		var chapterNameExtend = $('#wp-manga-modal-chapter-extend-name').val();
+		var chapterIndex = $('#wp-manga-modal-chapter-index').val();
 		var volume            = $('#wp-manga-modal-content #wp-manga-volume').val();
 		var chapterType       = $('input[name="wp-manga-chapter-type"]').val();
+		var chapterSEO = $('#manga-seo-desc').val();
+		var chapterWarning = $('#manga-warning-text').val();
+		var chapterStatus = $('#chapter_status').val();
+		var chapterAMPHeight = $('#chapter-amp-height').length > 0 ? $('#chapter-amp-height').val() : '';
+		
+		var chapter_data = {
+					action: 'wp-manga-save-chapter-paging',
+					postID: postID,
+					chapterID: chapterID,
+					chapterNewName: chapterNewName,
+					chapterNameExtend: chapterNameExtend,
+					chapterIndex: chapterIndex,
+					volume: volume,
+					chapterType: chapterType,
+					chapterSEO: chapterSEO,
+					chapterWarning: chapterWarning,
+					chapterStatus: chapterStatus,
+					chapterAMPHeight: chapterAMPHeight
+				}	;
 
-		$(document).trigger('wp_manga_before_admin_save_chapter', [postID, chapterID]);
-
+		$(document).trigger('wp_manga_before_admin_save_chapter', [postID, chapterID, chapter_data]);
+		
 		if (chapterType == 'text' || chapterType == 'video') {
 
 			tinyMCE.triggerSave();
 
 			var chapterContent = $('textarea#wp-manga-chapter-content-wp-editor').val();
 
-			// var isTMCEActive = isTinyMCEActive( 'wp-manga-chapter-content-wp-editor' );
-			//
-			// if( isTMCEActive ){
-			//     var chapterContent = tinyMCE.get().getContent();
-			// }else{
-			//     var chapterContent = $('textarea#wp-manga-chapter-content-wp-editor').val();
-			// }
+			chapter_data.chapterContent = chapterContent;
+			
+			window.mangaChapterSaveTrigger = chapter_data;
+			$(document).trigger('wp_manga_content_chapter_save', [window.mangaChapterSaveTrigger]);
+			chapter_data = window.mangaChapterSaveTrigger;
 
 			$.ajax({
 				url: wpManga.ajax_url,
 				type: 'POST',
 				dataType: 'json',
-				data: {
-					action: 'wp-manga-save-chapter-paging',
-					postID: postID,
-					chapterID: chapterID,
-					chapterNewName: chapterNewName,
-					chapterNameExtend: chapterNameExtend,
-					volume: volume,
-					chapterType: chapterType,
-					chapterContent: chapterContent,
-				},
+				data: chapter_data,
 				success: function (resp) {
 
 					if (resp.success == true) {
@@ -221,22 +265,20 @@ jQuery(document).ready(function ($) {
 			}).get();
 
 			var storage = $('#manga-storage-dropdown').val();
+			
+			chapter_data.storage = storage;
+			chapter_data.deletedImages = deletedImages;
+			chapter_data.paging = paging;
+			
+			window.mangaChapterSaveTrigger = chapter_data;
+			$(document).trigger('wp_manga_content_chapter_save', [window.mangaChapterSaveTrigger]);
+			chapter_data = window.mangaChapterSaveTrigger;
 
 			$.ajax({
 				url: wpManga.ajax_url,
 				type: 'POST',
 				dataType: 'json',
-				data: {
-					action:            'wp-manga-save-chapter-paging',
-					paging:            paging,
-					postID:            postID,
-					chapterID:         chapterID,
-					storage:           storage,
-					chapterNewName:    chapterNewName,
-					chapterNameExtend: chapterNameExtend,
-					volume:            volume,
-					deletedImages:     deletedImages
-				},
+				data: chapter_data,
 				success: function (resp) {
 
 					hideModalLoading();
@@ -249,6 +291,9 @@ jQuery(document).ready(function ($) {
 						alert('Can\'t Process.');
 					}
 					doingAjax = false;
+				},
+				complete : function(err){
+					hideModalLoading();
 				}
 			});
 		}
@@ -335,7 +380,6 @@ jQuery(document).ready(function ($) {
 				}
 			},
 		});
-
 	});
 
 	// Delete Chapter from Modal
@@ -373,7 +417,51 @@ jQuery(document).ready(function ($) {
 				doingAjax = false;
 			},
 		});
-	})
+	});
+	
+	attach_event_multi_select_chapters();
+	
+	$('#btn_do_multi_action').on('click', function(){
+		if($('#select_multi_action').val()){
+			if($('#select_multi_action').val() == 'delete'){
+				var selected_items = $('.chapter_select_item');
+				if(selected_items.length > 0){
+					var ids = [];
+					selected_items.each(function(key, item){
+						if($(item).is(':checked')){
+							ids.push($(item).val());
+						}
+					})
+					
+					if(ids.length > 0){
+					
+						if(confirm('Are you sure to do that?')){
+							$.ajax({
+								url: wpManga.ajax_url,
+								type: 'POST',
+								data: {
+									action: 'wp-manga-delete-chapter',
+									postID: $('#btn_do_multi_action').val(),
+									chapterID: 0,
+									chapterIDs: ids
+								},
+								success: function (resp) {
+									if (resp.success) {
+										for(var i = 0; i < ids.length; i++){
+											var id = ids[i];											
+											$('#chapter_select_' + id).parent().remove();
+										}
+									}
+								},
+							});
+						}
+					
+					}
+				}
+			}
+		}
+		return false;
+	});
 
 	// storage change in modal
 	$(document).on('change', '#manga-storage-dropdown', function (e) {
@@ -497,6 +585,9 @@ jQuery(document).ready(function ($) {
 				}
 
 			},
+			error: function(response, textStatus){
+				alert(textStatus);
+			},
 			complete: function (jqXHR, textStatus) {
 
 				hideModalLoading();
@@ -513,6 +604,44 @@ jQuery(document).ready(function ($) {
 			}
 		});
 	});
+	
+	$(document).on('click', '#remove-storage-btn', function(e){
+		e.preventDefault();
+		if(confirm('Are you sure want to delete this chapter storage?')){
+			showModalLoading();
+
+			var postID = $('input[name="postID"]').val();
+			var chapterID = $('#wp-manga-modal-chapter').val();
+			var storage = $('#manga-storage-dropdown').val();
+
+			jQuery.ajax({
+				url: wpManga.ajax_url,
+				type: 'POST',
+				data: {
+					action: 'wp-manga-remove-storage',
+					postID: postID,
+					chapterID: chapterID,
+					storage: storage
+				},
+				success: function (response) {
+
+					if (response.success == true) {
+						modalContentRefresh();
+						ajaxGetChapterModalContent(postID, chapterID);
+						alert(response.data);
+					}
+
+				},
+				error: function(response, textStatus){
+					alert(textStatus);
+				},
+				complete: function (jqXHR, textStatus) {
+
+					hideModalLoading();
+				}
+			});
+		}
+	});
 
 	//delete image in chapter
 	$(document).on('click', '.delete-page', function (e) {
@@ -527,20 +656,32 @@ jQuery(document).ready(function ($) {
 		thisPage.remove();
 	});
 
-	//show blogspot albums
+	//show blogspot/gphotos albums to choose
+	$(document).on('change', 'select[name="manga-storage"]', function () {
+		if ($(this).val() == 'picasa') {
+			$('#manga-upload #wp-manga-blogspot-albums').show();
+		} else {
+			$('#manga-upload #wp-manga-blogspot-albums').hide();
+		}
+		
+		if ($(this).val() == 'gphotos') {
+			$('#manga-upload #wp-manga-gphotos-albums').show();
+		} else {
+			$('#manga-upload #wp-manga-gphotos-albums').hide();
+		}
+	});
+	
 	$(document).on('change', 'select[name="wp-manga-chapter-storage"]', function () {
-		if ($('select[name="wp-manga-chapter-storage"]').val() == 'picasa') {
+		if ($(this).val() == 'picasa') {
 			$('#chapter-upload #wp-manga-blogspot-albums').show();
 		} else {
 			$('#chapter-upload #wp-manga-blogspot-albums').hide();
 		}
-	});
-
-	$(document).on('change', 'select[name="manga-storage"]', function () {
-		if ($('select[name="manga-storage"]').val() == 'picasa') {
-			$('#manga-upload #wp-manga-blogspot-albums').show();
+		
+		if ($(this).val() == 'gphotos') {
+			$('#chapter-upload #wp-manga-gphotos-albums').show();
 		} else {
-			$('#manga-upload #wp-manga-blogspot-albums').hide();
+			$('#chapter-upload #wp-manga-gphotos-albums').hide();
 		}
 	});
 
@@ -599,7 +740,7 @@ jQuery(document).ready(function ($) {
 			postID = $('input[name="post_ID"]').val();
 
 		if (volumeID == 0) {
-			question += ' ' . wpManga.strings.delNoVolChap;
+			question += ' ' + wpManga.strings.delNoVolChap;
 		}
 
 		var confirmDelete = confirm(question);
@@ -677,6 +818,8 @@ jQuery(document).ready(function ($) {
 		var label = $('span.wp-manga-chapter-type-label');
 		label.addClass(chapterType);
 		label.text(chapterType);
+		
+		$('#manga-information-metabox').addClass(chapterType);
 
 	});
 
@@ -746,6 +889,109 @@ jQuery(document).ready(function ($) {
 		});
 
 	});
+	
+	$('#gphotos-search-album').on('click', function (e) {
 
+		e.preventDefault();
 
+		var thisIcon = $(this).find('span');
+		var album = $(this).prev('input[name="gphotos-album-name"]').val();
+
+		$.ajax({
+			url: wpManga.ajax_url,
+			method: 'GET',
+			data: {
+				action: 'gphotos_search_album',
+				album: album,
+			},
+			beforeSend: function () {
+				thisIcon.removeClass('fa-search');
+				thisIcon.addClass('fa-spinner fa-spin');
+			},
+			success: function (response) {
+				if (response.success && typeof response.data.data !== 'undefined') {
+
+					var albumSelect = $('#gphotos-albums');
+
+					albumSelect.empty();
+
+					$(response.data.data).each(function (i, e) {
+						albumSelect.append('<option value="' + e.id + '">' + e.title + '(having ' + e.numphotos + ' items)' + '</option>');
+					});
+
+					albumSelect.parents('.wp-manga-form-group').show();
+					
+					$('#chapter-upload-msg').hide();
+				}else if( ! response.success && typeof response.data.message !== 'undefined' ){
+					mangaSingleMessage( response.data.message, '#chapter-upload-msg', false );
+				}
+			},
+			complete: function () {
+				thisIcon.addClass('fa-search');
+				thisIcon.removeClass('fa-spinner fa-spin');
+			}
+		});
+
+	});
+	
+	jQuery(document).on('click', '#btn_upload_chapter_images', function (e) {
+
+		var supporttitle = jQuery('.support-title').val();
+
+		var querytype = jQuery('.support-query').val();
+		
+		if(jQuery('#chapter_upload_images').prop('files').length > 0){
+			var file_data = jQuery('#chapter_upload_images').prop('files')[0];
+
+			var form_data = new FormData;
+			
+			var chapter_id = $('#wp-manga-modal-chapter').val();
+
+			form_data.append('file', file_data);
+			form_data.append('chapter_id', chapter_id);
+			form_data.append('storage', $('#manga-storage-dropdown').val());
+
+			$('#btn_upload_chapter_images .loading').show();
+			$('#upload_chapter_images_message').html('');
+			if(!jQuery('#btn_upload_chapter_images').attr('disabled')){
+				jQuery('#btn_upload_chapter_images').attr('disabled', true);
+				jQuery.ajax({
+					url : wpManga.ajax_url + '?action=wp-manga-chapter-upload-images',
+					processData : false,
+					contentType : false,
+					enctype: 'multipart/form-data',
+					type : 'POST',
+					data : form_data,
+					success: function (response) {
+						$('#btn_upload_chapter_images .loading').hide();
+						jQuery('#btn_upload_chapter_images').attr('disabled', false);
+						if(response.success){
+							$('#upload_chapter_images_message').removeClass('error').addClass('success');
+							
+							// clear form
+							$('#chapter_upload_images').val('');
+							$('#manga-sortable').html('');
+							// refresh content
+							ajaxGetChapterModalContent($('#wp-manga-modal-post-id').val(),chapter_id);
+							$('#upload_chapter_images_message').html(response.data.message);
+						} else {
+							$('#upload_chapter_images_message').removeClass('success').addClass('error');
+							$('#upload_chapter_images_message').html(response.data);
+						}
+						
+						
+					},
+					error: function (response) {
+						jQuery('#chapter_upload_images').attr('disabled', false);
+						$('#btn_upload_chapter_images .loading').hide();
+						$('#upload_chapter_images_message').removeClass('success').addClass('error').html(response);
+					}
+
+				});
+			}
+		}
+		
+		e.stopPropagation();
+		return false;
+	});
 });

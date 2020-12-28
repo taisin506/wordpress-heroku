@@ -135,3 +135,299 @@
 
 	}
 	add_action( 'wp_enqueue_scripts', 'localize_show_more_text', 30 );
+	
+	// do later
+	function madara_filter_content($content){
+		return $content;
+	}
+	
+	function madara_get_user_settings_tabs(){
+		global $wp_manga_user_actions;
+		$default_tabs = [
+			'bookmark' => array('url' => $wp_manga_user_actions->get_user_tab_url( 'bookmark' ), 'icon' => 'icon ion-ios-bookmark', 'label' => esc_html__( 'Bookmarks', 'madara' )),
+			'history' => array('url' => $wp_manga_user_actions->get_user_tab_url( 'history' ), 'icon' => 'icon ion-md-alarm', 'label' => esc_html__( 'History', 'madara' )),
+			'reader-settings' => array('url' => $wp_manga_user_actions->get_user_tab_url( 'reader-settings' ), 'icon' => 'icon ion-md-cog', 'label' => esc_html__( 'Reader Settings', 'madara' )),
+			'account-settings' => array('url' => $wp_manga_user_actions->get_user_tab_url( 'account-settings' ), 'icon' => 'icon ion-md-person', 'label' => esc_html__( 'Account Settings', 'madara' )),
+			'my-mangas' => array('url' => $wp_manga_user_actions->get_user_tab_url( 'my-mangas' ), 'icon' => 'icon ion-md-folder-open', 'label' => esc_html__( 'My Uploaded Mangas', 'madara' ))
+		];
+		
+		$reader_settings_tab = Madara::getOption( 'manga_reader_setting', 'on' );
+		if($reader_settings_tab == 'off'){
+			unset($default_tabs['reader-settings']);
+		}
+				
+		return apply_filters( 'madara_user_settings_tab_array_compare', $default_tabs);
+	}
+	
+	/**
+	 * Get search query args, used in Advanced Search Form
+	 **/
+	function madara_get_search_args(){
+		global $wp_manga, $wp_manga_functions;
+		$s         = isset( $_GET['s'] ) ? $_GET['s'] : '';
+		$s_genre   = isset( $_GET['genre'] ) ? $_GET['genre'] : array();
+		$s_tags  = isset( $_GET['tags'] ) ? $_GET['tags'] : '';
+		$s_author  = isset( $_GET['author'] ) ? $_GET['author'] : '';
+		$s_artist  = isset( $_GET['artist'] ) ? $_GET['artist'] : '';
+		$s_release = isset( $_GET['release'] ) ? $_GET['release'] : '';
+		$s_status  = isset( $_GET['status'] ) ? $_GET['status'] : array();
+
+		$s_orderby = isset( $_GET['m_orderby'] ) ? $_GET['m_orderby'] : '';
+		$s_paged   = get_query_var( 'paged' ) ? get_query_var( 'paged' ) : 1;
+		
+		$s_args = array(
+			's'        => $s,
+			'orderby'  => $s_orderby,
+			'paged'    => $s_paged,
+			'template' => 'search'
+		);
+		
+		$meta_query = array('relation' => 'AND');
+		if ( ! empty( $s_status ) ) {
+			$meta_query = array_merge($meta_query, array(
+				array(
+					'key'     => '_wp_manga_status',
+					'value'   => $s_status,
+					'compare' => 'IN'
+				),
+			));
+		}
+		
+		$s_adult = isset( $_GET['adult'] ) ? $_GET['adult'] : '';
+		if($s_adult != ''){
+			if(!$s_adult){
+				$meta_query = array_merge($meta_query, array(
+					array('relation' => 'OR',
+							array(
+								'key'     => 'manga_adult_content',
+								'value'   => ''
+							),
+							array(
+								'key'     => 'manga_adult_content',
+								'compare' => 'NOT EXISTS',
+								'value'   => ''
+							)
+					)
+				));
+
+			} else {
+				$meta_query = array_merge($meta_query, array(
+					array(
+						'key'     => 'manga_adult_content',
+						'value'   => serialize(array('yes'))
+					),
+				));
+			}
+		}
+		
+		$s_args['meta_query'] = $meta_query;
+
+		$tax_query = array();
+
+		if ( ! empty( $s_genre ) ) {
+			$tax_args = array(
+				'taxonomy' => 'wp-manga-genre',
+				'slug'     => $s_genre
+			);
+
+			$queried_genre = new WP_Term_Query( $tax_args );
+			$genres        = array();
+
+			if ( ! empty( $queried_genre->get_terms() ) ) {
+				foreach ( $queried_genre->get_terms() as $genre ) {
+					$genres[] = $genre->term_id;
+				}
+			}
+
+			if ( ! empty( $genres ) ) {
+				$s_genre_condition = isset( $_GET['op'] ) ? $_GET['op'] : '';
+				$or_genres = $s_genre_condition == '' ? true : false;
+				
+				if(!$or_genres){
+					$genre_args = array();
+					
+					foreach($genres as $genre){
+						$genre_args[] = array(
+								'taxonomy' => 'wp-manga-genre',
+								'field'    => 'term_id',
+								'terms'    => array($genre),
+								'operator' => 'IN'
+							);
+					}
+					
+					$tax_query[] = array(array_merge(array(
+							'relation' => 'AND'
+						), $genre_args));
+						
+				} else {
+					$tax_query[] = array(
+						'taxonomy' => 'wp-manga-genre',
+						'field'    => 'term_id',
+						'terms'    => $genres
+					);
+				}
+			}
+		}
+		
+		if(!empty($s_tags)){
+			$tax_query[] = array(
+						'taxonomy' => 'wp-manga-tag',
+						'field'    => 'slug',
+						'terms'    => explode(',', $s_tags)
+					);
+		}
+
+		if ( ! empty( $s_author ) ) {
+			$tax_args = array(
+				'taxonomy' => 'wp-manga-author',
+				'search'   => $s_author
+			);
+
+			$queried_author = new WP_Term_Query( $tax_args );
+			$authors        = array();
+
+			if ( ! empty( $queried_author->get_terms() ) ) {
+				foreach ( $queried_author->get_terms() as $author_term ) {
+					$authors[] = $author_term->term_id;
+				}
+			}
+
+			if ( ! empty( $s_author ) ) {
+				$tax_query[] = array(
+					'taxonomy' => 'wp-manga-author',
+					'field'    => 'term_id',
+					'terms'    => $authors
+				);
+			}
+		}
+
+		if ( ! empty( $s_artist ) ) {
+			$tax_args = array(
+				'taxonomy' => 'wp-manga-artist',
+				'search'   => $s_artist
+			);
+
+			$queried_artist = new WP_Term_Query( $tax_args );
+			$artists        = array();
+
+			if ( ! empty( $queried_artist->get_terms() ) ) {
+				foreach ( $queried_artist->get_terms() as $artist ) {
+					$artists[] = $artist->term_id;
+				}
+			}
+
+			if ( ! empty( $s_artist ) ) {
+				$tax_query[] = array(
+					'taxonomy' => 'wp-manga-artist',
+					'field'    => 'term_id',
+					'terms'    => $artists
+				);
+			}
+		}
+
+		if ( ! empty( $s_release ) ) {
+			$tax_args = array(
+				'taxonomy' => 'wp-manga-release',
+				'search'   => $s_release,
+			);
+
+			$queried_release = new WP_Term_Query( $tax_args );
+			$releases        = array();
+
+			if ( ! empty( $queried_release->get_terms() ) ) {
+				foreach ( $queried_release->get_terms() as $release ) {
+					$releases[] = $release->term_id;
+				}
+			}
+
+			if ( ! empty( $s_release ) ) {
+				$tax_query[] = array(
+					'taxonomy' => 'wp-manga-release',
+					'field'    => 'term_id',
+					'terms'    => $releases
+				);
+			}
+		}
+
+		// exclude args
+		$exclude_tags = Madara::getOption('manga_search_exclude_tags', '');
+		$exclude_genres = Madara::getOption('manga_search_exclude_genres', '');
+		$exclude_authors = Madara::getOption('manga_search_exclude_authors', '');
+		
+		if($exclude_tags != '' || $exclude_genres != '' || $exclude_authors != ''){
+			$exclude_args = array();
+			
+			if($exclude_tags != ''){
+				$exclude_args[] = array(
+							'taxonomy' => 'wp-manga-tag',
+							'field'    => 'slug',
+							'terms'    => explode(',', $exclude_tags),
+							'operator' => 'NOT IN'
+						);
+			}
+			
+			if($exclude_genres != ''){
+				$tax_args = array(
+					'taxonomy' => 'wp-manga-genre',
+					'slug'     => $exclude_genres
+				);
+
+				$queried_genre = new WP_Term_Query( $tax_args );
+				$genres        = array();
+
+				if ( ! empty( $queried_genre->get_terms() ) ) {
+					foreach ( $queried_genre->get_terms() as $genre ) {
+						$genres[] = $genre->term_id;
+					}
+				}
+				
+				$exclude_args[] = array(
+							'taxonomy' => 'wp-manga-genre',
+							'field'    => 'term_id',
+							'terms'    => $genres,
+							'operator' => 'NOT IN'
+						);
+			}
+			
+			if($exclude_authors != ''){
+				$tax_args = array(
+					'taxonomy' => 'wp-manga-author',
+					'search'   => $exclude_authors
+				);
+
+				$queried_author = new WP_Term_Query( $tax_args );
+				$authors        = array();
+
+				if ( ! empty( $queried_author->get_terms() ) ) {
+					foreach ( $queried_author->get_terms() as $author_term ) {
+						$authors[] = $author_term->term_id;
+					}
+				}
+				
+				$exclude_args[] = array(
+							'taxonomy' => 'wp-manga-author',
+							'field'    => 'term_id',
+							'terms'    => $authors,
+							'operator' => 'NOT IN'
+						);
+			}
+			
+			if ( ! empty( $tax_query ) ) {
+				$s_args['tax_query'] = array_merge(array(
+					'relation' => 'AND'
+				), $exclude_args);
+			} else {
+				$s_args['tax_query'] = array_merge(array(
+					'relation' => 'AND'
+				), $exclude_args);
+			}
+		} else {
+			if ( ! empty( $tax_query ) ) {
+				$s_args['tax_query'] = array_merge(array(
+					'relation' => 'OR'
+				), $tax_query);
+			}
+		}
+		
+		return apply_filters('madara_search_args', $s_args);
+	}

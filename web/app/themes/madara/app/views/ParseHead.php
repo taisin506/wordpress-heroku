@@ -44,7 +44,7 @@
 
 				$thumbnail_url = wp_get_attachment_url( get_post_thumbnail_id( $post->ID ) );
                 $image_attributes = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ), array(1200, 630) );
-				$image = $image_attributes[0];
+				$image = $image_attributes ? $image_attributes[0] : null;
 
 				global $_wp_additional_image_sizes;
 
@@ -94,10 +94,24 @@
 							"author": {
 								"@type": "Person",
 								"name": "<?php
-								$author = get_user_by( 'id', $post->post_author );
-								if ( $author ) {
-									echo esc_attr( $author->display_name );
-								}; ?>"
+								
+								$meta_type = Madara::getOption('manga_single_meta_author', 'wp_author');
+								
+								if($meta_type == 'wp_author'){
+									$author = get_user_by( 'id', $post->post_author );
+									if ( $author ) {
+										echo esc_attr( $author->display_name );
+									};
+								} else {
+									global $wp_manga_functions;
+									
+									if(isset($wp_manga_functions)){
+										$mangaAuthors = $wp_manga_functions->get_manga_authors($post->ID);
+										echo esc_attr(strip_tags($mangaAuthors));
+									}
+								}
+								
+								?>"
 							},
 							"publisher": {
 								"@type": "Organization",
@@ -118,7 +132,7 @@
 
 				$meta_tags_html .= '<meta property="og:type" content="' . esc_attr( $post_format ) . '"/>' . PHP_EOL;
 
-			}elseif( is_tax() ){
+			} elseif( is_tax() ){
 				$term = get_queried_object();
 
 				if( isset( $term->term_id ) ){
@@ -166,6 +180,8 @@
 			}
 
 			$meta_tags_html .= '<meta name="twitter:image" content="' . esc_attr( $image ) . '" />' . PHP_EOL;
+			
+			$meta_tags_html .= '<meta name="description" content="' . esc_attr( strip_shortcodes( $description ) ) . '" />';
 
 			$meta_tags_html .= '<meta name="generator" content="' . esc_attr( esc_html__( 'Powered by Madara - A powerful multi-purpose theme by Madara', 'madara' ) ) . '" />' . PHP_EOL;
 

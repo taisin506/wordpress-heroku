@@ -163,8 +163,10 @@
 
 		}
 
-		function get( $table, $where, $orderBy, $order ) {
-
+		/**
+		 * $limit - LIMIT {OFFSET},{COUNT}
+		 **/
+		function get( $table, $where, $orderBy, $order, $limit = '' ) {
 			$sort_setting = $this->get_sort_setting();
 
 			$sort_by    = $sort_setting['sortBy'];
@@ -174,10 +176,22 @@
 				$sort_by = $orderBy;
 				$sort_order = !empty( $order ) ? $order : 'desc';
 			}
+			
+			
+			/**
+			 * it's not always better for performance to enable the query cache, and at larger cache sizes it can actually be detrimental to performance as cache pruning (pushing less-used data out of memory to make way for new entries) takes longer. When invalidation and pruning take longer than the query takes to execute, you've got serious problems.
+			 **/
+			$is_cache_enabled = defined('WP_MANGA_QUERY_CACHE') ? "SQL_CACHE {$table}.*" : "{$table}.*";
+			
+			$is_cache_enabled = apply_filters('wp_manga_db_get_SELECT', $is_cache_enabled, $table, $where, $orderBy, $order, $limit);
+			$table = apply_filters('wp_manga_db_get_TABLE', $table, $is_cache_enabled, $where, $orderBy, $order, $limit);
+			$where = apply_filters('wp_manga_db_get_WHERE', $where, $table, $is_cache_enabled, $orderBy, $order, $limit);
+			
+			$sql_orderby = "";
 
 			if( $sort_by == 'date' ){
 				$sql = "
-							SELECT SQL_CACHE *
+							SELECT {$is_cache_enabled}
 							FROM $table
 						";
 
@@ -185,24 +199,58 @@
 					$sql .= "WHERE $where";
 				}
 
-				$sql .= "
+				$sql_orderby = "
 							ORDER BY $sort_by $sort_order
 						";
-			}else{
+			}elseif($sort_by == 'name'){
 				$sql = "
-							SELECT SQL_CACHE *
+							SELECT {$is_cache_enabled}
 							FROM $table
 						";
 
 				if( !empty( $where ) ){
 					$sql .= "WHERE $where";
 				}
-			}
+				
+			} elseif( $sort_by == 'volume_index' ){
+				// for getting volume
+				$sql = "
+							SELECT {$is_cache_enabled}
+							FROM $table
+						";
 
+				if( !empty( $where ) ){
+					$sql .= "WHERE $where";
+				}
+				$sql_orderby = " ORDER BY volume_index $sort_order";
+			} else {
+				// $sort_by = 'index';
+				$sql = "
+							SELECT {$is_cache_enabled}
+							FROM $table
+						";
+
+				if( !empty( $where ) ){
+					$sql .= "WHERE $where";
+				}
+				$sql_orderby = " ORDER BY chapter_index $sort_order";
+			}
+			
+			$sql .= apply_filters('wp_manga_db_get_ORDERBY', $sql_orderby, $is_cache_enabled, $table, $where, $orderBy, $order, $limit);
+			
+			if($sort_by != 'name' && $limit != ""){
+				$sql .= " $limit";
+			}
+			
+			$sql = apply_filters('wp_manga_db_get_SQL', $sql, $table, $where, $orderBy, $order, $limit);
+	
 			$results = $this
 			->get_wpdb()
 			->get_results( $sql, 'ARRAY_A' );
-
+			
+			/**
+			 * low performance
+			 **/
 			if( $results && $sort_by == 'name' ){
 
 				if( strpos( $table, 'chapters' ) !== false ){
@@ -210,11 +258,11 @@
 				}elseif( strpos( $table, 'volumes' ) !== false ){
 					$column = 'volume_name';
 				}
-
+				
 				if( isset( $column ) ){
 
 					//bring column name to be key of results array
-					$names = array_column( $results, $column );
+					$names = array_map(function($element) use($column){return $element[$column];}, $results);
 
 					natcasesort( $names );
 
@@ -231,8 +279,14 @@
 					}
 
 				}
+				
+				if(strpos( $table, 'chapters' ) !== false && $limit){
+					$count = substr($limit, strrpos($limit, ',') + 1); 
+					
+					$results = array_slice($results, 0, $count);
+				}
 			}
-
+			
 			return $results;
 
 		}
@@ -276,35 +330,20 @@
 		}
 
 		function alter_add_column( $table_name, $column_name, $column_data ){
-
-			return !empty( $this->get_wpdb()->query( "ALTER TABLE {$table_name}
-			ADD COLUMN {$column_name} {$column_data}" ) );
+			$sql = "ALTER TABLE {$table_name}
+			ADD COLUMN {$column_name} {$column_data}";
+			return !empty( $this->get_wpdb()->query( $sql ) );
 
 		}
 
 		function get_sort_setting(){
 
-			//get sort option
-			if( class_exists( 'App\Madara' ) ){
-				$sort_option = App\Madara::getOption('manga_chapters_order', 'name_desc');
-			}else{
-				$sort_option = 'name_desc';
-			}
+			$sort_option = array(
+								'sortBy' => 'name',
+								'sort' => 'desc'
+							);
 
-			if( in_array( $sort_option, array( 'name_desc', 'name_asc' ) ) ){
-				$sort_option = array(
-					'sortBy' => 'name',
-					'sort'   => $sort_option == 'name_desc' ? 'desc' : 'asc'
-				);
-			}else{
-				$sort_option = array(
-					'sortBy' => 'date',
-					'sort'   => $sort_option == 'date_desc' ? 'desc' : 'asc',
-				);
-			}
-
-			return $sort_option;
-
+			return apply_filters('wp_manga_chapters_sort', $sort_option);
 		}
 	}
 

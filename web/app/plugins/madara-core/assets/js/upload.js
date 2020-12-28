@@ -22,6 +22,7 @@ jQuery(document).ready(function($){
     	var name       = $('#wp-manga-chapter-name').val();
     	var storage    = $('#wp-manga-chapter-storage').val();
     	var nameExtend = $('#wp-manga-chapter-name-extend').val();
+		var chapterIndex = $('#wp-manga-chapter-index').val();
 		var directlink = $('#wp-manga-chapter-link').val();
 
     	if ( !name || '' == name ) {
@@ -37,6 +38,7 @@ jQuery(document).ready(function($){
     	fd.append( 'post', post );
     	fd.append( 'name' , name );
         fd.append( 'nameExtend', nameExtend );
+		fd.append( 'chapterIndex', chapterIndex );
         fd.append( 'storage' , storage );
         fd.append( 'volume', volume );
 		fd.append('directlink', directlink);
@@ -44,6 +46,10 @@ jQuery(document).ready(function($){
         if( storage == 'picasa' ){
             fd.append( 'picasa_album', $('#chapter-upload #wp-manga-blogspot-albums').val() );
         }
+		
+		if(storage == 'gphotos'){
+			fd.append( 'gphotos_album', $('#chapter-upload #wp-manga-gphotos-albums').val() );
+		}
 
         var file_data = $('#wp-manga-chapter-file')[0].files; // for multiple files
 
@@ -82,6 +88,10 @@ jQuery(document).ready(function($){
         $('#chapter-overwrite').hide();
         $('#chapters-overwrite-select').hide();
         $('input[name="chapter-overwrite"]').prop( 'checked', false );
+		
+		window.mangaChapterFileUpload = fd;
+	    $(document).trigger('wp_manga_content_chapter_file_upload_trigger', [window.mangaChapterFileUpload]);
+	    fd = window.mangaChapterFileUpload;
 
 	    $.ajax({
             url: wpManga.ajax_url + '?action=wp-manga-upload-chapter',
@@ -114,6 +124,8 @@ jQuery(document).ready(function($){
 
                 }else if( resp.success == false && resp.data.error == 'storage_error' ){
                     mangaSingleMessage( resp.data.message, '#chapter-upload-msg', false );
+                }else if( resp.success == false && typeof resp.data.message !== 'undefined' ){
+                    mangaSingleMessage( resp.data.message, '#chapter-upload-msg', false );
                 }else{
                     mangaSingleMessage( resp.data, '#chapter-upload-msg', false );
                 }
@@ -125,6 +137,10 @@ jQuery(document).ready(function($){
                 if( storage == 'picasa' ){
                     updatePicasaAlbumDropdown( $('#chapter-upload #wp-manga-blogspot-albums').val() );
                 }
+				
+				if(textStatus == 'error'){
+					alert('Something happened. Please check server error logs'); 
+				}
             }
 	    });
 
@@ -144,7 +160,7 @@ jQuery(document).ready(function($){
         e.preventDefault();
 
         var mangaFile = $('#wp-manga-file')[0].files[0];
-        var volume = $('#wp-manga-volume-upload').val();
+        var volume = $('#manga-upload #wp-manga-volume').val();
         var storage = $('select[name="manga-storage"]').val();
         var postID = $('input[name="post_ID"]').val();
 
@@ -153,6 +169,7 @@ jQuery(document).ready(function($){
             return false;
         }
         showLoading();
+		
         var formData = new FormData;
         formData.append( 'mangaFile', mangaFile );
         formData.append( 'volume', volume );
@@ -163,6 +180,14 @@ jQuery(document).ready(function($){
         if( storage == 'picasa' ){
             formData.append( 'picasa_album', $('#manga-upload #wp-manga-blogspot-albums').val() );
         }
+		
+		if(storage == 'gphotos'){
+			formData.append( 'gphotos_album', $('#manga-upload #wp-manga-gphotos-albums').val() );
+		}
+		
+		 window.mangaChapterFileUploadMulti = formData;
+	    $(document).trigger('wp_manga_content_chapter_file_upload_multi_trigger', [window.mangaChapterFileUploadMulti]);
+	    formData = window.mangaChapterFileUploadMulti;
 
         jQuery.ajax({
             url : wpManga.ajax_url+'?action=wp-manga-upload',
@@ -238,6 +263,10 @@ jQuery(document).ready(function($){
         fd.append( 'chapterType', chapterType );
         fd.append( 'postID', postID );
         fd.append( 'action', 'chapter_content_upload' );
+		
+		window.mangaContentChapterUploadMulti = fd;
+	    $(document).trigger('wp_manga_content_chapter_upload_multi_chap', [window.mangaContentChapterUploadMulti])
+	    fd = window.mangaContentChapterUploadMulti;
 
         $.ajax({
             url : wpManga.ajax_url,
@@ -254,14 +283,13 @@ jQuery(document).ready(function($){
                 if( response.success ){
                     clearFormFields('#chapter-content-upload');
                     mangaSingleMessage( 'Upload Complete', messageID, true );
+                } else{
+                  mangaSingleMessage( typeof response.data.message !== "undefined" ? response.data.message : response.data, messageID, false );
                 }
-                // else{
-                //     mangaSingleMessage( response.data.message, messageID, false );
-                // }
             },
-            complete : function(){
+            complete : function( e, xhr ){
                 hideLoading();
-                updateChaptersList();
+                updateChaptersList(); 
             }
         });
     });
@@ -280,19 +308,22 @@ jQuery(document).ready(function($){
             var album = $('#amazon-folder-url').val();
         }else if( cloudStorage == 'flickr' ){
             var album = $('#flickr-album-url').val();
-        }else{
-            mangaSingleMessage( 'Invalid Storage', '#chapter-upload-msg', false );
-            return;
+        } else {
+			var album = $('#' + cloudStorage + '-albums').val();
+            //mangaSingleMessage( 'Invalid Storage', '#chapter-upload-msg', false );
+            //return;
         }
 
         var regex = new RegExp( cloudStorageURLRegex[ cloudStorage ] );
 
         if( regex.exec( album ) == null ){
             mangaSingleMessage( 'Invalid URL', '#chapter-upload-msg', false );
+			return;
         }
 
         if( album == null || album == '' ){
             mangaSingleMessage( 'Album cannot be empty', '#chapter-upload-msg', false );
+			return;
         }
 
         var post       = $('input[name="postID"]').val();

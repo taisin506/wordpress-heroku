@@ -84,11 +84,15 @@ class WP_MANGA_IMGUR_UPLOAD {
 		if ( $accessToken ) {
 			$title = $upload['uniqid'].'_'.$upload['chapter'];
 			$album = $this->create_album( $accessToken, $title );
-			// $result['extra']['album_id'] = $album->data->id;
-			// $result['extra']['deletehash'] = $album->data->deletehash;
+			
 			if ( $album ) {
 				foreach ( $upload['file'] as $file ) {
-					$path = $upload['host'].$file;
+					$path = $upload['dir'] . $file;
+					
+					if(!file_exists($path)){
+						$result['error'] = __('Images do not exist', WP_MANGA_TEXTDOMAIN);
+						return $result;
+					}
 					$mime = $wp_manga_storage->mime_content_type( $file );
 					$image = $this->image_upload( $accessToken, $path, $file , $album->data->id, $mime );
 					if( isset( $image->data->link ) ) {
@@ -103,7 +107,8 @@ class WP_MANGA_IMGUR_UPLOAD {
 			}
 
 		} else {
-			return false;
+			$result['error'] = __('Please configure IMGUR Access Token', WP_MANGA_TEXTDOMAIN);
+			return $result;
 		}
 	}
 
@@ -199,7 +204,7 @@ class WP_MANGA_IMGUR_UPLOAD {
 
 	function get_album_images( $album ){
 
-		$album = ltrim( $album, 'https://imgur.com/a/' );
+		$album = str_replace( 'https://imgur.com/a/', '', $album );
 
 		$accessToken = $this->get_access_token();
 

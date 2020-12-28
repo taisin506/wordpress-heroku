@@ -13,13 +13,13 @@
         <div class="search-navigation__wrap">
             <ul class="main-menu-search nav-menu">
                 <li class="menu-search">
-                    <a href="javascript:;" class="open-search-main-menu"> <i class="ion-ios-search-strong"></i>
+                    <a href="javascript:;" class="open-search-main-menu"> <i class="icon ion-ios-search"></i>
                         <i class="ion-android-close"></i> </a>
 
                 </li>
             </ul>
         </div>
-    </div><a class="ion-android-menu menu-collapse"></a>
+    </div><a class="icon ion-android-menu menu-collapse"></a>
 
     <div class="menu-collapse_content">
         <div class="main-menu">

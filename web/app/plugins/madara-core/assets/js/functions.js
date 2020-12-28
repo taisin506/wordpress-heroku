@@ -94,7 +94,8 @@
 
                 jQuery('.fetching-data').toggleClass('hidden');
                 jQuery('.chapter-list').css('opacity', '1');
-
+				
+				attach_event_multi_select_chapters();
             }
         });
     }
@@ -205,9 +206,21 @@
 		if (chapter.chapter.chapter_name_extend !== '') {
 			jQuery('#wp-manga-modal-chapter-extend-name').val(chapter.chapter.chapter_name_extend);
 		}
+		
+		if (chapter.chapter.chapter_index !== '') {
+			jQuery('#wp-manga-modal-chapter-index').val(chapter.chapter.chapter_index);
+		}
 
 		//assign volume
 		jQuery('#wp-manga-modal-content #wp-manga-volume').val(chapter.chapter.volume_id);
+		
+		jQuery('#manga-seo-desc').val(chapter.chapter.chapter_seo);
+		jQuery('#manga-warning-text').val(chapter.chapter.chapter_warning);
+		jQuery('#chapter_status').val(chapter.chapter.chapter_status);
+		
+		if(jQuery('#chapter-amp-height').length > 0){
+			jQuery('#chapter-amp-height').val(chapter.chapter.AMP_Height);
+		}
 
 		if (chapter.type == 'manga') {
 
@@ -240,6 +253,12 @@
 			});
 
 			jQuery('#manga-storage-dropdown').val(inUse);
+			
+			if(jQuery('#manga-storage-dropdown option').length > 1){
+				jQuery('#remove-storage-btn').show();
+			} else {
+				jQuery('#remove-storage-btn').hide();
+			}
 
 			if (chapter.available_host !== undefined) {
 				jQuery.each(chapter.available_host, function (i, e) {
@@ -261,6 +280,6 @@
 			}
 		}
 		
-		$(document).trigger('wp_manga_after_admin_fill_chapter_modal_content', [chapter, storage]);
+		jQuery(document).trigger('wp_manga_after_admin_fill_chapter_modal_content', [chapter, storage]);
 
 	}

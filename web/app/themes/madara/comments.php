@@ -20,13 +20,16 @@
 
 <div class="hr mv40"></div>
 
-<div id="comments" class="comments-area">
+<div id="madara-comments" class="comments-area">
 
 	<?php // You can start editing here -- including this comment! ?>
 
 	<?php comment_form( App\Views\ParseComment::get_comment_form_args() ); ?>
 
-	<?php if ( have_comments() ) : ?>
+	<?php 
+	
+						
+	if ( have_comments() ) : ?>
         <h4 class="comments-title">
 			<?php
 				printf( _n( '1 Comment', '%d Comments', get_comments_number(), 'madara' ), number_format_i18n( get_comments_number() ) );

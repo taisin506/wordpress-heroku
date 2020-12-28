@@ -1,13 +1,23 @@
 <?php
 
-	$orderby = isset( $_GET['m_orderby'] ) ? $_GET['m_orderby'] : 'latest';
+	$orderby = isset( $_GET['m_orderby'] ) ? $_GET['m_orderby'] : '';
 
 ?>
 
 <div class="c-nav-tabs">
     <span> <?php esc_html_e( 'Order by', 'madara' ); ?> </span>
     <ul class="c-tabs-content">
-        <li class="<?php echo esc_attr($orderby == 'latest' ? "active" : ''); ?>">
+		<?php 
+		
+		if(is_search()){?>
+        <li class="<?php echo esc_attr($orderby == '' ? "active" : ''); ?>">
+            <a href="<?php echo is_search() ? madara_search_filter_url( '' ) : ''; ?>">
+				<?php esc_html_e( 'Relevance', 'madara' ); ?>
+            </a>
+        </li>
+		
+		<?php }?>
+		<li class="<?php echo esc_attr($orderby == 'latest' ? "active" : ''); ?>">
             <a href="<?php echo is_search() ? madara_search_filter_url( 'latest' ) : '?m_orderby=latest'; ?>">
 				<?php esc_html_e( 'Latest', 'madara' ); ?>
             </a>

@@ -88,7 +88,7 @@ body.wp-manga-first-install-page .board {
 
 body.wp-manga-first-install-page .board .nav-tabs {
     position: relative;
-    margin: 40px auto;
+    margin: 0px auto 40px auto;
     margin-bottom: 0;
     box-sizing: border-box;
     border-bottom: 4px solid #eb3349;
@@ -165,10 +165,10 @@ body.wp-manga-first-install-page span.round-tabs {
     border-radius: 100px;
     background: white;
     z-index: 2;
-    position: absolute;
     left: 0;
     text-align: center;
     font-size: 25px;
+	position: absolute;
 }
 
 body.wp-manga-first-install-page .main-btn {
@@ -200,7 +200,6 @@ body.wp-manga-first-install-page li a.active-step > span.round-tabs {
 
 body.wp-manga-first-install-page li a.active-step > span.round-tabs i{
     display: block;
-    font-family: FontAwesome;
     line-height: 70px;
     color: #fff;
 }
@@ -309,4 +308,38 @@ body.wp-manga-first-install-page .btn.green {
     body.wp-manga-first-install-page .btn-outline-rounded {
         padding: 12px 20px;
     }
+}
+
+.wp-manga-first-install-page .nav {
+    padding-left: 0;
+    list-style: none;
+	display: block;
+	flex-wrap: unset;
+}
+
+.nav:before, .nav:after{
+	display: table;
+    content: " ";
+}
+.nav:after{
+	clear: both;
+}
+.nav-tabs>li {
+    float: left;
+	position: relative;
+    display: block;
+}
+
+.nav-tabs>li>a {
+     position: relative;
+    display: block;
+    padding: 10px 15px;
+	margin-right: 2px;
+    line-height: 1.42857143;
+    border: 1px solid transparent;
+    border-radius: 4px 4px 0 0;
+}
+
+.wp-manga-first-install-page .fade.in {
+    opacity: 1;
 }

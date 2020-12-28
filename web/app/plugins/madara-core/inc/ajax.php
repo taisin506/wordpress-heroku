@@ -23,6 +23,8 @@ class WP_MANGA_AJAX {
 		add_action( 'wp_ajax_replace_blogspot_url', array( $this, 'replace_blogspot_url' ) );
 
 		add_action( 'wp_ajax_wp-manga-duplicate-server', array( $this, 'wp_manga_duplicate_server' ) );
+		
+		add_action( 'wp_ajax_wp-manga-remove-storage', array( $this, 'wp_manga_remove_storage' ) );
 
 		require_once( WP_MANGA_DIR . '/inc/ajax/backend.php' );
 		require_once( WP_MANGA_DIR . '/inc/ajax/frontend.php' );
@@ -168,6 +170,23 @@ class WP_MANGA_AJAX {
             wp_send_json_success( $response );
         }
     }
+	
+	function wp_manga_remove_storage(){
+		$post_id          = isset( $_POST['postID'] ) ? $_POST['postID'] : '';
+        $chapter_id       = isset( $_POST['chapterID'] ) ? $_POST['chapterID'] : '';
+        $storage = isset( $_POST['storage'] ) ? $_POST['storage'] : '';
+
+        if( empty( $post_id ) || empty( $chapter_id ) || empty( $storage ) ) {
+            wp_send_json_error();
+        }
+
+        global $wp_manga_storage;
+        $response = $wp_manga_storage->remove_storage( $post_id, $chapter_id, $storage );
+
+        if( $response !== false ) {
+            wp_send_json_success( $response );
+        }
+	}
 
 	function wp_manga_first_install_page_save(){
 

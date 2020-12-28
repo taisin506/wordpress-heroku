@@ -20,12 +20,16 @@
     $amazon_s3_access_key    = isset( $options['amazon_s3_access_key'] ) ? $options['amazon_s3_access_key'] : '';
     $amazon_s3_access_secret = isset( $options['amazon_s3_access_secret'] ) ? $options['amazon_s3_access_secret'] : '';
     $amazon_s3_region        = isset( $options['amazon_s3_region'] ) ? $options['amazon_s3_region'] : '';
+	$amazon_s3_cdn        = isset( $options['amazon_s3_cdn'] ) ? $options['amazon_s3_cdn'] : '';
     ?>
     <div class="wrap wp-manga-wrap">
         <h2>
             <?php echo get_admin_page_title(); ?>
         </h2>
         <form method="post">
+			<?php if(false){
+				// hide settings for Blogspot as it is not supported anymore since 15.03
+				?>
             <h2>
                 <?php esc_html_e( 'Blogspot Settings', WP_MANGA_TEXTDOMAIN ) ?>
                 <span class="wp-manga-tooltip dashicons dashicons-editor-help"><span class="wp-manga-tooltip-text"><?php esc_html_e( ' - You can start using this upload feature when you see the Authorizing success display.', WP_MANGA_TEXTDOMAIN ) ?>
@@ -146,6 +150,7 @@
                     </tr>
                 <?php } ?>
             </table>
+			<?php } ?>
             <h2>
                 <?php esc_html_e( 'Imgur Settings', WP_MANGA_TEXTDOMAIN ) ?>
                 <span class="wp-manga-tooltip dashicons dashicons-editor-help"><span class="wp-manga-tooltip-text"><?php esc_html_e( ' - API setting for storage in Imgur.com', WP_MANGA_TEXTDOMAIN ) ?></span></span>
@@ -211,6 +216,11 @@
                 <span class="wp-manga-tooltip dashicons dashicons-editor-help"><span class="wp-manga-tooltip-text"><?php esc_html_e( ' - API setting for storage in Flickr.com', WP_MANGA_TEXTDOMAIN ) ?></span></span>
             </h2>
             <table class="form-table">
+				<tr>
+					<td colspan="2">
+						<span style="color:red">Flickr will be limited to <a href="https://blog.flickr.net/2018/11/01/a-sharper-focus-for-flickr/" target="_blank">1000 images</a> in free account since Feb. 5, 2019. Thus we do not recommend using Flickr anymore. Support for Flickr storage will be terminated on Feb. 5, 2019 until new annoucement</span>
+					</td>
+				</tr>
                 <tr>
                     <th scope="row">
                         <?php esc_html_e( 'API Key', WP_MANGA_TEXTDOMAIN ) ?>
@@ -289,7 +299,7 @@
                 <?php esc_html_e( 'And Also provide the permission for Any Authenticated AWS User can read and write ', WP_MANGA_TEXTDOMAIN ); ?>
 
                 <br>
-                <?php esc_html_e( ' - Then go back to your website >> dashboard >> Settings >> WP Cloud Media Settings >> Input your Key ID and Secret and also the Region of your account and your Bucket then save changes and you can start to upload. ', WP_MANGA_TEXTDOMAIN ); ?>
+                <?php esc_html_e( ' - Then go back here to input your Key ID and Secret and also the Region of your account and your Bucket then save changes and you can start to upload. ', WP_MANGA_TEXTDOMAIN ); ?>
             </p>
             <table class="form-table">
                 <tr>
@@ -299,12 +309,13 @@
                     <td>
                         <p>
                             <input name="wp_manga[amazon_s3_access_key]" type="text" class="large-text" value="<?php echo esc_attr( $amazon_s3_access_key ); ?>">
+						</p>
                         <p class="description">
                             <?php esc_html_e( 'You can create the key ID at', WP_MANGA_TEXTDOMAIN ) ?>
                             <a href="https://console.aws.amazon.com/iam/home" target="_blank">
                                 <?php esc_html_e( 'console.aws.amazon.com/iam', WP_MANGA_TEXTDOMAIN ) ?>
                             </a>
-                        <p></p>
+                        </p>
                     </td>
                 </tr>
                 <tr>
@@ -327,38 +338,76 @@
                         </p>
                     </td>
                 </tr>
-                <?php global $wp_manga_amazon_upload;
-                    $buckets = $wp_manga_amazon_upload->buckets;
-                    if ( $buckets ) :
-                        $current_bucket = $wp_manga_amazon_upload->get_upload_bucket( $buckets );
-                        ?>
-                        <tr>
-                            <th scope="row">
-                                <?php esc_html_e( 'Bucket', WP_MANGA_TEXTDOMAIN ) ?>
-                            </th>
-                            <td>
-                                <select name="wp_manga[amazon_s3_bucket]">
-                                    <?php foreach ( $buckets as $key => $value ) { ?>
-                                        <option value="<?php echo esc_attr( $value['Name'] ); ?>" <?php selected( $current_bucket, $value['Name'], true ); ?>><?php echo esc_html( $value['Name'] ); ?></option>
-                                    <?php } ?>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">
-                                <span>
-                                    <?php esc_html_e( 'Authorize', WP_MANGA_TEXTDOMAIN ) ?>
-                                </span>
-                            </th>
-                            <td>
-                                <p>
-                                    <span class="dashicons dashicons-yes"></span>
-                                    <?php esc_html_e( 'Authorizing Success', WP_MANGA_TEXTDOMAIN ) ?>
-                                </p>
-                            </td>
-                        </tr>
-                    <?php endif; ?>
+				<tr>
+                    <th scope="row">
+                        <?php esc_html_e( 'Custom CDN', WP_MANGA_TEXTDOMAIN ) ?>
+                    </th>
+                    <td>
+                        <p>
+                            <input name="wp_manga[amazon_s3_cdn]" type="text" class="large-text" value="<?php echo esc_attr( $amazon_s3_cdn ); ?>">
+                        </p>
+						<p class="description">
+							<?php esc_html_e('If you have Custom CDN URL for Amazon S3 storage, enter it here. If not, just leave empty. Value does not include https');?>
+						</p>
+                    </td>
+                </tr>
+				<?php 
+					if($amazon_s3_access_key != '' && $amazon_s3_access_secret != ''){
+					global $wp_manga_amazon_upload;
+					try {
+						$buckets = $wp_manga_amazon_upload->amazon_get_buckets();
+						if ( $buckets ) {
+							$current_bucket = $wp_manga_amazon_upload->get_upload_bucket();
+						?>
+							<tr>
+								<th scope="row">
+									<?php esc_html_e( 'Bucket', WP_MANGA_TEXTDOMAIN ) ?>
+								</th>
+								<td>
+									<select name="wp_manga[amazon_s3_bucket]">
+										<?php foreach ( $buckets as $bucket_name ) { ?>
+											<option value="<?php echo esc_attr( $bucket_name ); ?>" <?php selected( $current_bucket, $bucket_name, true ); ?>><?php echo esc_html( $bucket_name ); ?></option>
+										<?php } ?>
+									</select>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row">
+									<span>
+										<?php esc_html_e( 'Authorize', WP_MANGA_TEXTDOMAIN ) ?>
+									</span>
+								</th>
+								<td>
+									<p>
+										<span class="dashicons dashicons-yes"></span>
+										<?php esc_html_e( 'Authorizing Success', WP_MANGA_TEXTDOMAIN ) ?>
+									</p>
+								</td>
+							</tr>
+						<?php } else { ?>
+							<tr>
+								<td colspan="2">
+									<p style="color:red">
+										<?php esc_html_e( 'You don\'t have any buckets yet. Please create one in your Amazon account', WP_MANGA_TEXTDOMAIN ) ?>
+									</p>
+								</td>
+							</tr>
+						<?php }
+					} catch (\Throwable $th) {
+						?>
+							<tr>
+								<td colspan="2">
+									<p style="color:red">
+										<strong>ERROR:</strong> <?php echo $th->getMessage(); ?>
+									</p>
+								</td>
+							</tr>
+						<?php
+					}
+				}?>
             </table>
+			
+			<?php do_action('wp_manga_storage_settings'); ?>
 
             <button type="submit" class="button button-primary"><?php esc_attr_e( 'Save Changes', WP_MANGA_TEXTDOMAIN ) ?></button>
         </form>

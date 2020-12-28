@@ -9,7 +9,12 @@
 		jQuery("#pageloader").fadeOut(500);
 
 		if (jQuery('body').hasClass('adult-content')) {
-			jQuery('#adult_modal').modal({backdrop: 'static', keyboard: false});
+			var cookie_adult = window.wpmanga.getCookie('wpmanga-adault');
+			if(cookie_adult != 1){
+				jQuery('#adult_modal').modal({backdrop: 'static', keyboard: false});
+			} else {
+				jQuery('body').removeClass('censored');
+			}
 		}
 
 	});
@@ -27,14 +32,14 @@
 			$(document).on("click", ".page-prev-link", function () {
 				var prev_page_button = $('.main-col-inner .c-blog-post .wp-manga-nav .nav-links a.prev_page');
 				if (typeof prev_page_button !== 'undefined' && prev_page_button.length > 0 && prev_page_button.is(":visible")) {
-					prev_page_button.click();
+					$(prev_page_button[0]).trigger('click');
 				}
 			});
 
 			$(document).on("click", ".page-next-link", function () {
 				var next_page_button = $('.main-col-inner .c-blog-post .wp-manga-nav .nav-links a.next_page');
 				if (typeof next_page_button !== 'undefined' && next_page_button.length > 0 && next_page_button.is(":visible")) {
-					next_page_button.click();
+					$(next_page_button[0]).trigger('click');
 				}
 			});
 
@@ -80,6 +85,7 @@
 
 		if (jQuery('body').hasClass('censored')) {
 			jQuery('.btn-adult-confirm').on('click', function (e) {
+				window.wpmanga.setCookie('wpmanga-adault', 1, 7);
 				jQuery('body').removeClass('censored');
 			});
 		}
@@ -151,7 +157,7 @@
 		/**
 		 * Compare scrollTop position to add .sticky class
 		 */
-		var felis_need_add_sticky = function () {
+		var madara_need_add_sticky = function () {
 			var scrollTop = $(window).scrollTop();
 			if (scrollTop - stickyNavigation > 750 && $("body").hasClass("sticky-enabled")) {
 				$(cloneHeader).css('height', navigationHeight);
@@ -195,12 +201,12 @@
 
 
 				} else {
-					felis_need_add_sticky();
+					madara_need_add_sticky();
 				}
 			} else if (diffY > 0) {
 				// Scroll up
 
-				felis_need_add_sticky();
+				madara_need_add_sticky();
 			} else {
 				// First scroll event
 			}
@@ -211,7 +217,7 @@
 
 		if ($('body').hasClass('sticky-enabled')) {
 			$(window).on('scroll', function () {
-				if ($(window).width() >= 768) {
+				if ($(window).width() >= 768 || $('body').hasClass('sticky-for-mobile')) {
 					stickyNav();
 				}
 			});
@@ -283,6 +289,7 @@
 			}
 			;
 		});
+        
 		// search
 		$('.main-menu-search .open-search-main-menu').on('click', function () {
 			var $this = $(this);
@@ -293,12 +300,26 @@
 					$this.parents('.c-header__top').find('.search-main-menu').find('input[type="text"]').blur();
 				}, 200);
 				$this.removeClass('search-open');
+				
+				if($('body').hasClass('mobile')){
+					var $adv_search_link = $('.link-adv-search', $('#blog-post-search'));
+					if($adv_search_link.length > 0){
+						$adv_search_link.remove();
+					}
+				}
 			} else {
 				$this.parents('.c-header__top').find('.search-main-menu').addClass('active');
 				setTimeout(function () {
 					$this.parents('.c-header__top').find('.search-main-menu').find('input[type="text"]').focus();
 				}, 200);
 				$this.addClass('search-open');
+				
+				if($('body').hasClass('mobile')){
+					var $adv_search_link = $('.link-adv-search', $this.closest('.widget-manga-search'));
+					if($adv_search_link.length > 0){
+						$('#blog-post-search').append($adv_search_link.clone());
+					}
+				}
 			}
 			;
 		});
@@ -313,7 +334,7 @@
 		});
 
 
-		// accordion  view chap
+		// accordion view chap
 		$(".listing-chapters_wrap ul.main > li.has-child").on('click', function (e) {
 			var $this = $(this);
 			$(e.target).toggleClass("active").children("ul").slideToggle(300);
@@ -334,6 +355,8 @@
 
 			var $this = $(this);
 			var style = $(this).parents(".manga-slider").attr('data-style');
+			var autoplay = $(this).parents(".manga-slider").attr('data-autoplay');
+			autoplay = autoplay == "1" ? true : false;
 			var manga_slidesToShow = parseInt($(this).parents(".manga-slider").attr('data-count'));
 			var check_style = $this.parents(".style-3").length;
 			var check_rtl = (jQuery("body").css('direction') === "rtl");
@@ -343,14 +366,15 @@
 				speed: 500,
 				centerMode: (((manga_slidesToShow % 2 !== 0) && (!check_style)) ? true : false),
 				slidesToShow: manga_slidesToShow,
-				slidesToScroll: check_style ? 3 : 1,
+				slidesToScroll: 1,
 				arrows: false,
 				rtl: check_rtl,
+				autoplay: autoplay,
 				responsive: [{
 					breakpoint: 992,
 					settings: {
 						slidesToShow: (manga_slidesToShow == 1) ? 1 : 2,
-						slidesToScroll: (manga_slidesToShow == 1) ? 1 : 2,
+						slidesToScroll: 1,
 						infinite: true,
 						centerMode: false,
 						dots: true
@@ -377,14 +401,15 @@
 				infinite: true,
 				speed: 500,
 				slidesToShow: manga_slidesToShow,
-				slidesToScroll: manga_slidesToShow,
+				slidesToScroll: 1,
 				arrows: false,
 				rtl: check_rtl,
+				autoplay: autoplay,
 				responsive: [{
 					breakpoint: 992,
 					settings: {
 						slidesToShow: (manga_slidesToShow == 1) ? 1 : 2,
-						slidesToScroll: (manga_slidesToShow == 1) ? 1 : 2,
+						slidesToScroll: 1,
 						infinite: true,
 						dots: true
 					}
@@ -403,14 +428,15 @@
 				infinite: true,
 				speed: 500,
 				slidesToShow: manga_slidesToShow,
-				slidesToScroll: manga_slidesToShow,
+				slidesToScroll: 1,
 				arrows: false,
 				rtl: check_rtl,
+				autoplay: autoplay,
 				responsive: [{
 					breakpoint: 992,
 					settings: {
 						slidesToShow: (manga_slidesToShow == 1) ? 1 : 2,
-						slidesToScroll: (manga_slidesToShow == 1) ? 1 : 2,
+						slidesToScroll: 1,
 						infinite: true,
 						dots: true
 					}
@@ -443,6 +469,8 @@
 		$(".popular-slider .slider__container").each(function () {
 			var manga_slidesToShow = parseInt($(this).parents(".popular-slider").attr('data-count'));
 			var check_rtl = (jQuery("body").css('direction') === "rtl");
+			var autoplay = $(this).parents(".popular-slider").attr('data-autoplay');
+			autoplay = autoplay == "1" ? true : false;
 			var popular_style_2 = {
 				dots: false,
 				infinite: true,
@@ -450,27 +478,28 @@
 				slidesToShow: manga_slidesToShow,
 				arrows: true,
 				rtl: check_rtl,
-				slidesToScroll: manga_slidesToShow,
+				autoplay: autoplay,
+				slidesToScroll: 1,
 				responsive: [
 					{
 						breakpoint: 1700,
 						settings: {
 							slidesToShow: (manga_slidesToShow == 1) ? 1 : 4,
-							slidesToScroll: (manga_slidesToShow == 1) ? 1 : 4,
+							slidesToScroll: 1,
 						}
 					},
 					{
 						breakpoint: 1400,
 						settings: {
 							slidesToShow: (manga_slidesToShow == 1) ? 1 : 3,
-							slidesToScroll: (manga_slidesToShow == 1) ? 1 : 3,
+							slidesToScroll: 1,
 						}
 					},
 					{
 						breakpoint: 992,
 						settings: {
 							slidesToShow: (manga_slidesToShow == 1) ? 1 : 2,
-							slidesToScroll: (manga_slidesToShow == 1) ? 1 : 2,
+							slidesToScroll: 1,
 						}
 					},
 					{
@@ -489,27 +518,28 @@
 				slidesToShow: manga_slidesToShow,
 				arrows: true,
 				rtl: check_rtl,
-				slidesToScroll: manga_slidesToShow,
+				autoplay: autoplay,
+				slidesToScroll: 1,
 				responsive: [
 					{
 						breakpoint: 1700,
 						settings: {
 							slidesToShow: 4,
-							slidesToScroll: 4,
+							slidesToScroll: 1,
 						}
 					},
 					{
 						breakpoint: 1200,
 						settings: {
 							slidesToShow: 3,
-							slidesToScroll: 3,
+							slidesToScroll: 1,
 						}
 					},
 					{
 						breakpoint: 992,
 						settings: {
 							slidesToShow: 2,
-							slidesToScroll: 2,
+							slidesToScroll: 1,
 						}
 					},
 					{
@@ -582,47 +612,65 @@
 				}
 			});
 		}
-
-		if ($('body').has('.listing-chapters_wrap.show-more .version-chap').length) {
-			var text_chap = $('.version-chap');
-			var btn_chap = $('.chapter-readmore');
-			var height_parent = text_chap.height();
-			var check_show_btn = function () {
-				if (height_parent >= 550) {
-					btn_chap.addClass('less-chap');
-					btn_chap.fadeIn(300);
-					$('.listing-chapters_wrap').addClass('show');
-					text_chap.addClass('active');
-				} else {
-					btn_chap.fadeOut(300);
-					$('.listing-chapters_wrap').removeClass('show');
-					text_chap.removeClass('active')
+		
+		$(document).on('wp_manga_after_load_chapters_list', function(){
+			if ($('body').has('.listing-chapters_wrap.show-more .version-chap').length) {
+				var text_chap = $('.listing-chapters_wrap.show-more .version-chap');
+				var btn_chap = $('.listing-chapters_wrap.show-more .chapter-readmore');
+				var height_parent = text_chap.height();
+				var check_show_btn = function () {
+					if (height_parent >= 550) {
+						btn_chap.addClass('less-chap');
+						btn_chap.fadeIn(300);
+						$('.listing-chapters_wrap.show-more').addClass('show');
+						text_chap.addClass('active');
+					} else {
+						btn_chap.fadeOut(300);
+						$('.listing-chapters_wrap.show-more').removeClass('show');
+						text_chap.removeClass('active')
+					}
 				}
-			}
-			$(".listing-chapters_wrap ul.main > li.has-child").on('click', function (e) {
-				var $this = $(this);
-				setTimeout(function () {
-					height_parent = $this.parents('.version-chap').height();
-					check_show_btn();
-				}, 300);
-			});
-			check_show_btn();
-			btn_chap.click(function (e) {
-				e.stopPropagation();
-				if (btn_chap.hasClass('less-chap')) {
-					btn_chap.removeClass('less-chap');
-					btn_chap.fadeOut(300);
-					text_chap.addClass('loading');
-					$('.listing-chapters_wrap').removeClass('show');
+				$(".listing-chapters_wrap.show-more ul.main > li.has-child").on('click', function (e) {
+					var $this = $(this);
 					setTimeout(function () {
-						btn_chap.remove();
-						text_chap.animate({'max-height': '100%'});
-						text_chap.removeClass('loading');
-						text_chap.addClass('loaded');
-					}, 1000);
-				}
+						height_parent = $this.parents('.version-chap').height();
+						check_show_btn();
+					}, 300);
+				});
+				check_show_btn();
+				btn_chap.click(function (e) {
+					e.stopPropagation();
+					if (btn_chap.hasClass('less-chap')) {
+						btn_chap.removeClass('less-chap');
+						btn_chap.fadeOut(300);
+						text_chap.addClass('loading');
+						$('.listing-chapters_wrap.show-more').removeClass('show');
+						setTimeout(function () {
+							btn_chap.remove();
+							text_chap.animate({'max-height': '100%'});
+							text_chap.removeClass('loading');
+							text_chap.addClass('loaded');
+						}, 1000);
+					}
+				});
+			}
+			
+			$('.btn-reverse-order').on('click', function(e){
+				var main_lists = $('.main.version-chap');
+				main_lists.each(function(idx){
+					var listItems = $(this).children('li');
+					$(this).append(listItems.get().reverse());
+				});
+				
+				var sub_lists = $('.sub-chap.list-chap');
+				sub_lists.each(function(idx){
+					var listItems = $(this).children('li');
+					$(this).append(listItems.get().reverse());
+				});
+				
+				return false;
 			});
-		}
+		});
 
 		//Mobile Collapse Genres
 		$(document).on('click', '.c-sub-header-nav .mobile-icon', function (e) {
@@ -635,18 +683,28 @@
 			}
 		});
 
-		var pagination_btn = $(".mobile-nav-btn");
-		var select_pagination = $(".select-pagination");
+		var mobile_pagination_btn_attach_click = function(){
+			var pagination_btn = $(".mobile-nav-btn");
+			var select_pagination = $(".select-pagination");
+			
+			// unbind event first
+			pagination_btn.unbind('click');
+			pagination_btn.on('click', function (e) {
 
-		pagination_btn.on('click', function (e) {
+				e.preventDefault();
+				if (select_pagination.parent().hasClass('active')) {
+					select_pagination.parent().removeClass('active');
+				} else {
+					select_pagination.parent().addClass('active');
+				}
 
-			e.preventDefault();
-			if (select_pagination.parent().hasClass('active')) {
-				select_pagination.parent().removeClass('active');
-			} else {
-				select_pagination.parent().addClass('active');
-			}
-
+			});
+		};
+		mobile_pagination_btn_attach_click();
+		
+		// re-attach click event after ajax loading chapter
+		$(document).on('wp_manga_on_chapter_navlinks_click', function(){
+			mobile_pagination_btn_attach_click();
 		});
 
 		$('#btn_view_full_image').on('click', function(e){
@@ -657,8 +715,32 @@
 			e.preventDefault();
 			e.stopPropagation();
 		});
-
-
+		
+		$('#btn-read-first').on('click', function(e){
+			var the_link;
+			the_link = $('.listing-chapters_wrap .wp-manga-chapter:eq(0) > a');
+			if(the_link.attr('href') != '#'){
+				location.href = the_link.attr('href');
+			}
+			
+			the_link.trigger('click');
+			
+			return false;
+		});
+		
+		$('#btn-read-last').on('click', function(e){
+			var count = $('.listing-chapters_wrap .wp-manga-chapter').length - 1;
+			var the_link;
+			the_link = $('.listing-chapters_wrap .wp-manga-chapter:eq(' + count + ') > a');
+			
+			if(the_link.attr('href') != '#'){
+				location.href = the_link.attr('href');
+			}
+			
+			the_link.trigger('click');
+			
+			return false;
+		});
 	});
 
 

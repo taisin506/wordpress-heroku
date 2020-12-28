@@ -59,7 +59,7 @@
 				array_push( $wp_registered_widget_controls[ $id ]['params'], $id );
 			}
 
-			if ( 'post' == strtolower( $_SERVER['REQUEST_METHOD'] ) ) {
+			if(isset($_POST) && isset($_POST['widget-id'])){
 				foreach ( (array) $_POST['widget-id'] as $widget_number => $widget_id ) {
 					$custom_variation = array(); // array of custom_variation, layout, values
 

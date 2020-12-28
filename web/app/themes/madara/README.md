@@ -1,6 +1,4 @@
-THEME SHARED ON THEMELOCK.COM
+madara
+===
 
-
- RETAIL ONLY THEMES AND TEMPLATES/ THEMELOCK.COM
-
- www.themelock.com
+madara is starter theme built for Madara's projects

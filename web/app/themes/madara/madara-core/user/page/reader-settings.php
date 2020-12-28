@@ -5,8 +5,8 @@
 
 	$user_id = get_current_user_id();
 	//update reading settings
-	$reading_style = isset( $_POST['_manga_reading_style'] ) ? $_POST['_manga_reading_style'] : $GLOBALS['wp_manga_functions']->get_reading_style();
-
+	$reading_style = isset( $_POST['_manga_reading_style'] ) ? $_POST['_manga_reading_style'] : 'default';
+	
 	$user_img_per_page = get_user_meta( $user_id, '_manga_img_per_page', true );
 
 	if( isset( $_POST['_manga_img_per_page'] ) ){
@@ -20,9 +20,13 @@
 	if ( isset( $_POST['reader-settings-submit'] ) ) {
 		update_user_meta( $user_id, '_manga_reading_style', $reading_style );
 		update_user_meta( $user_id, '_manga_img_per_page', $img_per_page );
+		update_user_meta( $user_id, '_manga_user_site_schema', $_POST['_manga_site_schema'] );
 		$is_update = true;
 	}
-
+	
+	$site_schema = get_user_meta( $user_id, '_manga_user_site_schema', true);
+	$reading_style = get_user_meta( $user_id, '_manga_reading_style', true);
+	$img_per_page = get_user_meta( $user_id, '_manga_img_per_page', true);
 ?>
 
 <?php if ( !empty( $is_update )) { ?>
@@ -37,11 +41,32 @@
         <div class="settings-heading">
             <h3><?php esc_html_e( 'Reading Settings', 'madara' ); ?></h3>
         </div>
+		<div class="tab-item">
+            <div class="settings-title">
+                <h3><?php esc_html_e( 'Site Schema', 'madara' ); ?></h3>
+            </div>
+            <div class="checkbox">
+                <input id="manga_site_schema_default" type="radio" name="_manga_site_schema" value="" <?php checked( $site_schema, '' ); ?>>
+                <label for="manga_site_schema_default"><?php esc_html_e( 'Default', 'madara' ); ?></label>
+            </div>
+			<div class="checkbox">
+                <input id="manga_site_schema_light" type="radio" name="_manga_site_schema" value="dark" <?php checked( $site_schema, 'dark' ); ?>>
+                <label for="manga_site_schema_light"><?php esc_html_e( 'Dark', 'madara' ); ?></label>
+            </div>
+            <div class="checkbox">
+                <input id="manga_site_schema_dark" type="radio" name="_manga_site_schema" value="light" <?php checked( $site_schema, 'light' ); ?>>
+                <label for="manga_site_schema_dark"><?php esc_html_e( 'Light', 'madara' ); ?></label>
+            </div>
+        </div>
         <div class="tab-item">
             <div class="settings-title">
                 <h3><?php esc_html_e( 'Reading Style', 'madara' ); ?></h3>
             </div>
             <div class="checkbox">
+                <input id="manga_reading_default" type="radio" name="_manga_reading_style" value="default" <?php checked( $reading_style, 'default' ); ?>>
+                <label for="manga_reading_default"><?php esc_html_e( 'Default', 'madara' ); ?></label>
+            </div>
+			<div class="checkbox">
                 <input id="manga_reading_page" type="radio" name="_manga_reading_style" value="paged" <?php checked( $reading_style, 'paged' ); ?>>
                 <label for="manga_reading_page"><?php esc_html_e( 'Paged', 'madara' ); ?></label>
             </div>

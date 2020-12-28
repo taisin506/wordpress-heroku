@@ -45,7 +45,8 @@
             }
 
             $backtrace        = debug_backtrace();
-            $called_functions = array_column( $backtrace, 'function' );
+			$col = 'function';
+            $called_functions = array_map(function($element) use($col ){return $element[$col ];}, $backtrace);
 
             // if filter dsq_can_load wasn't called from enqueue_comment_embed then skip
             if( in_array( 'enqueue_comment_embed', $called_functions ) ){
@@ -119,7 +120,10 @@
             global $post, $wp_manga_functions;
 
             if( $wp_manga_functions->is_manga_reading_page() ){
-                $post->guid .= '&chapter=' . get_query_var('chapter');
+				$chapter = madara_permalink_reading_chapter();
+				if($chapter){
+					$post->guid .= '&chapter=' . $chapter['chapter_slug'];
+				}
             }
 
             return $post->ID . ' ' . $post->guid;
@@ -152,7 +156,10 @@
             global $wp_manga_functions;
 
             if( $wp_manga_functions->is_manga_reading_page() ){
-                return $wp_manga_functions->build_chapter_url( get_the_ID(), get_query_var('chapter') );
+				$chapter = madara_permalink_reading_chapter();
+				if($chapter){
+                return $wp_manga_functions->build_chapter_url( get_the_ID(), $chapter['chapter_slug'] );
+				}
             }
 
             return get_permalink();

@@ -713,7 +713,7 @@
 
 						if ( $is_manga_single || $is_page_bookmarked ) {
 
-							$output .= '<a class="wp-manga-delete-bookmark" href="javascript:void(0)" data-action="delete-bookmark" data-post-id="' . $post_id . '" title="Delete Bookmark"><i class="ion-checkmark"></i></a>';
+							$output .= '<a class="wp-manga-delete-bookmark" href="javascript:void(0)" data-action="delete-bookmark" data-post-id="' . $post_id . '" title="Delete Bookmark"><i class="icon ion-md-checkmark"></i></a>';
 
 							if ( $is_manga_single ) {
 								$output .= '</div>';

@@ -68,6 +68,8 @@
 				$html_img_responsive = ( $img_srcset != '' && $img_sizes != '' ) ? ( ( $lazyload == 'on' ) ? ' data-srcset="' . $img_srcset . '" data-sizes="' . $img_sizes . '"' : ' srcset="' . $img_srcset . '" sizes="' . $img_sizes . '"' ) : '';
 
 				$image_attributes = wp_get_attachment_image_src( $attachment_id, $size );
+				
+				$style = ' style="' . ((strrpos($img_src, '.gif') !== false) ? 'width:auto; ': '');
 
 				if ( $lazyload == 'on' ) {
 					$ratio = '';
@@ -81,10 +83,10 @@
 
 						if ( $image_attributes[2] / $image_attributes[1] <= 1 ) {
 							$ratio = ( $image_attributes[2] / $image_attributes[1] * 100 );
-							$ratio = 'style="padding-top:' . $ratio . '%; "';
+							$style .= 'padding-top:' . $ratio . '%;';
 						} else {
 							$ratio = $image_attributes[2];
-							$ratio = 'style="padding-top:' . $ratio . 'px; "';
+							$style .= 'padding-top:' . $ratio . 'px;';
 						}
 
 					}
@@ -92,12 +94,14 @@
 
 					$lazyload_dfimg = apply_filters( 'madara_image_placeholder_url', get_parent_theme_file_uri( '/images/dflazy.jpg' ), $size );
 
-					$lazyClass = ' class="img-responsive lazyload effect-fade" src="' . $lazyload_dfimg . '" ' . $ratio;
+					$lazyClass = ' class="img-responsive lazyload effect-fade" src="' . $lazyload_dfimg . '" ';
 				} else {
 					$lazyClass = ' class="img-responsive"';
 				}
+				
+				$style .= '" ';
 
-				$html = $html_img_src != '' ? '<img width="' . $image_attributes[1] . '" height="' . $image_attributes[2] . '" ' . $html_img_src . $html_img_responsive . $lazyClass . ' alt="' . esc_attr( get_the_title( $attachment_id ) ) . '"/>' : '';
+				$html = $html_img_src != '' ? '<img width="' . $image_attributes[1] . '" height="' . $image_attributes[2] . '" ' . $html_img_src . $html_img_responsive . $lazyClass . $style . ' alt="' . esc_attr( get_the_title( $attachment_id ) ) . '"/>' : '';
 
 				// this filter is used by Nelio External Thumbnail plugin
 				$html = apply_filters( 'post_thumbnail_html', $html, $post_id, $attachment_id, $size, $image_attributes );

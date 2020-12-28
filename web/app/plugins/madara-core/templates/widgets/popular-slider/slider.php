@@ -29,7 +29,7 @@
 							foreach ( $chapters as $c_key => $chapter ) {
 								$style = $wp_manga_functions->get_reading_style();
 
-								$manga_link = $wp_manga_functions->build_chapter_url( get_the_ID(), $c_key, $style );
+								$manga_link = $wp_manga_functions->build_chapter_url( get_the_ID(), $chapter, $style );
                                 
 								?>
 

@@ -1,25 +1,26 @@
 <?php
 	/** Manga Reading Content - Text type **/
 
-?>
-
-<?php
-
 	$wp_manga     = madara_get_global_wp_manga();
 	$post_id      = get_the_ID();
-	$name         = get_query_var( 'chapter' );
-	$chapter_type = get_post_meta( get_the_ID(), '_wp_manga_chapter_type', true );
-	if ( $name == '' ) {
-		get_template_part( 404 );
-		exit();
+	
+	$this_chapter = function_exists('madara_permalink_reading_chapter') ? madara_permalink_reading_chapter() : false;
+	
+	if(!$this_chapter){
+		 // support Madara Core before 1.6
+		 if($chapter_slug = get_query_var('chapter')){
+			global $wp_manga_functions;
+			$this_chapter = $wp_manga_functions->get_chapter_by_slug( $post_id, $chapter_slug );
+		 }
+		 if(!$this_chapter){
+			return;
+		 }
 	}
-
-	$this_chapter = madara_get_global_wp_manga_chapter()->get_chapter_by_slug( get_the_ID(), $name );
-
-	if ( ! $this_chapter ) {
-		return;
-	}
-
+	
+	$chapter_type = get_post_meta( $post_id, '_wp_manga_chapter_type', true );
+	
+	$name = $this_chapter['chapter_slug'];
+	
 	$chapter_content = new WP_Query( array(
 		'post_parent' => $this_chapter['chapter_id'],
 		'post_type'   => 'chapter_text_content'
@@ -40,6 +41,9 @@
             <div class="text-left">
 				<?php echo apply_filters('the_content', $post->post_content); ?>
             </div>
+			<div id="text-chapter-toolbar">
+				<a href="#"><i class="icon ion-md-settings"></i></a>
+			</div>
 
 			<?php do_action( 'madara_after_text_chapter_content' ); ?>
 
@@ -47,7 +51,7 @@
 
 			<?php do_action( 'madara_before_video_chapter_content' ); ?>
 
-            <div class="chapter-video-frame">
+            <div class="chapter-video-frame" id="chapter-video-frame">
 				<?php $wp_manga->chapter_video_content($post, $server); ?>
             </div>
 

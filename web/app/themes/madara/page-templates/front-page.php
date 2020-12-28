@@ -17,7 +17,7 @@
 		exit;
 	}
 	
-	get_header();
+	
 
 	$madara_archive_heading_text = Madara::getOption( 'archive_heading_text', '' );
 	$madara_archive_heading_icon = Madara::getOption( 'archive_heading_icon', '' );
@@ -52,10 +52,96 @@
 	} else {
 		$paged = 1;
 	}
-
-	$madara_custom_query = madara_get_front_page_query( $post_type, $paged, $manga_type );
+	
+	if ( isset($_GET['start']) && $_GET['start'] != '' ) {
+		$start = $_GET['start'];
+		
+		set_query_var( 'starts_with', $start == '0' ? '-0' : $start);
+		
+		add_filter('madara_ajax_query_arguments', function($args){
+					$args['starts_with'] = ($_GET['start'] == '0' ? '-0' : $_GET['start']);
+					
+					return $args;
+		});
+	}
+	
+	$orderby        = Madara::getOption( 'page_post_orderby' );
+	if($orderby == 'name'){
+		$show_alphabeta_filters = Madara::getOption( 'manga_filter_by_characters', 'on' ) == 'on' ? true : false;
+	} else {
+		$show_alphabeta_filters = false;
+	}
 
 	if ( $page_content == 'manga' ) {
+		switch($orderby){
+			case 'name':
+				$orderby2 = 'alphabet';
+				break;
+			case 'modified':
+				$orderby2 = 'latest';
+				break;
+			case 'latest':
+				$orderby2 = 'new-manga';
+				break;
+			case 'rand':
+				$orderby2 = 'random';
+				break;
+			default:
+				$orderby2 = $orderby;
+				break;
+		}
+
+		$args = array('orderby' => $orderby2, 'paged' => $paged);
+		
+		$meta_query = array('relation' => 'AND');
+		if($manga_type != ''){
+			$meta_query[] = array('key' => '_wp_manga_chapter_type',
+									'value' => $manga_type
+									);
+		}
+		
+		$posts_per_page = Madara::getOption('page_post_count');
+		if($posts_per_page) $args['posts_per_page'] = $posts_per_page;
+		
+		$args['tax_query'] = array();
+		$args['tax_query']['relation'] = 'OR';
+		
+		$manga_tags = get_post_meta(get_the_ID(), 'manga_tags', true);
+		if($manga_tags != ''){
+			
+			$manga_tags_array = explode( ',', $manga_tags );
+			foreach ( $manga_tags_array as $g ) {
+				$args['tax_query'][] = array(
+					'taxonomy' => 'wp-manga-tag',
+					'terms'    => sanitize_title(trim($g)),
+					'field'    => 'slug',
+				);
+			}
+		}
+		
+		$manga_genres = get_post_meta(get_the_ID(), 'manga_genres', true);
+		if($manga_genres != ''){
+			
+			$manga_genres_array = explode( ',', $manga_genres );
+			foreach ( $manga_genres_array as $g ) {
+				$args['tax_query'][] = array(
+					'taxonomy' => 'wp-manga-genre',
+					'terms'    => sanitize_title(trim($g)),
+					'field'    => 'slug',
+				);
+			}
+		}
+		
+		$manga_status = get_post_meta(get_the_ID(), 'manga_status', true);
+		if($manga_status){
+			$meta_query[] = array('key' => '_wp_manga_status',
+									'value' => $manga_status
+									);
+		}
+		
+		$args['meta_query'] = $meta_query;
+		
+		$madara_custom_query = madara_manga_query( $args );
 
 		set_query_var( 'sidebar', $madara_sidebar );
 
@@ -65,6 +151,7 @@
 
 
 	} else {
+		$madara_custom_query = madara_get_front_page_query( $post_type, $paged, $manga_type );
 
 		set_query_var( 'archive_content_columns', $archive_content_columns );
 
@@ -78,7 +165,16 @@
 
 	$madara_post_count = $madara_custom_query->post_count;
 	
+	if($madara_post_count == 0) {
+		global $wp_query;
+		  $wp_query->set_404();
+		  status_header( 404 );
+		  get_template_part( 404 ); exit();
+	}
+	
 	$manga_archives_item_layout = Madara::getOption( 'manga_archives_item_layout', 'default' );
+	
+	get_header();
 
 ?>
 
@@ -97,7 +193,7 @@
 							<?php if ( $madara_archive_heading_text != '' ) { ?>
                                 <div class="c-blog__heading style-2 font-heading <?php echo esc_attr( $madara_archive_heading_icon == '' ? 'no-icon' : '' ); ?>">
 
-                                    <h4>
+                                    <h1 class="h4">
 
 										<?php if ( $madara_archive_heading_icon != '' ) { ?>
                                             <i class="<?php echo esc_attr( $madara_archive_heading_icon ); ?>"></i>
@@ -105,14 +201,19 @@
 
 										<?php echo esc_html( $madara_archive_heading_text ); ?>
 
-                                    </h4>
+                                    </h1>
                                 </div>
 							<?php } ?>
 
                             <div class="c-blog-listing <?php echo esc_attr( $class_2 ); ?>">
                                 <div class="c-blog__inner">
                                     <div class="c-blog__content">
-
+											<?php 
+											if($show_alphabeta_filters){
+												global $wp;
+												manga_listing_alphabeta_bars($wp->request ? home_url('/') . $wp->request : home_url('/'));
+											}
+											?>
 										<?php if ( $madara_custom_query->have_posts() ) : ?>
 
                                             <div id="loop-content" class="page-content-listing <?php echo esc_attr('item-' . $manga_archives_item_layout);?>">
@@ -132,11 +233,14 @@
 
 													if ( $page_content == 'manga' ) {
 														get_template_part( 'madara-core/content/content-archive' );
+														
 													} else {
 														get_template_part( 'html/loop/content' );
 													}
 
 													$index ++;
+													
+													do_action('madara-manga-archive-loop', $index);
 
 													?>
 

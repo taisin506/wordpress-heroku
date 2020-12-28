@@ -1,13 +1,13 @@
 <?php
-
+	use App\Madara;
 	if ( ! is_user_logged_in() ) {
 		return;
 	}
 
 	$wp_manga_functions = madara_get_global_wp_manga_functions();
 	$user_id       = get_current_user_id();
-	$bookmarks     = get_user_meta( $user_id, '_wp_manga_bookmark', true );
-	$reading_style = $GLOBALS['wp_manga_functions']->get_reading_style();
+	$bookmarks     = $wp_manga_functions->get_bookmarked_mangas( $user_id, Madara::getOption('manga_bookmark_list_orderby', ''));
+	$reading_style = $wp_manga_functions->get_reading_style();
 	$reading_style = ! empty( $reading_style ) ? $reading_style : 'paged';
 
 ?>
@@ -23,9 +23,12 @@
     <tbody>
 
 	<?php if ( ! empty( $bookmarks ) ) {
+		$order = Madara::getOption('manga_bookmark_list_order', 'oldest_first');
+		if($order == 'newest_first')
+			$bookmarks = array_reverse($bookmarks); // latest bookmarked items on top
 		foreach ( $bookmarks as $bookmark ) {
 
-			$post = get_post( intval( $bookmark['id'] ) );
+			$post = isset($bookmark['post']) ? $bookmark['post'] : get_post( intval( $bookmark['id'] ) );
 
 			if ( $post == null || $post->post_status !== 'publish' ) {
 				continue;
@@ -111,7 +114,7 @@
                             <input id="<?php echo esc_attr( $post_id ); ?>" class="bookmark-checkbox" value="<?php echo esc_attr( $post_id ); ?>" type="checkbox">
                             <label for="<?php echo esc_attr( $post_id ); ?>"></label>
                         </div>
-                        <a class="wp-manga-delete-bookmark" href="javascript:void(0)" data-post-id="<?php echo esc_attr( $post_id ); ?>"><i class="ion-ios-close"></i></a>
+                        <a class="wp-manga-delete-bookmark" href="javascript:void(0)" data-post-id="<?php echo esc_attr( $post_id ); ?>"><i class="icon ion-ios-close"></i></a>
                     </div>
                 </td>
             </tr>

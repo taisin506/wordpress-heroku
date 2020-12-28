@@ -20,7 +20,7 @@
 
 	jQuery(document).ready(function () {
 		if (jQuery('#navigation-ajax').length > 0) {
-			jQuery('#navigation-ajax').live('click', function (e) {
+			jQuery(document).on('click', '#navigation-ajax', function (e) {
 				e.preventDefault();
 
 				if (_current_page > -1 && !_ajax_loading) {
@@ -59,6 +59,8 @@
 									jQuery('.navigation-ajax').hide();
 									jQuery('.invi.no-posts').remove();
 								}
+                                
+                                jQuery(document).trigger('wp_manga_after_paginated');
 							} else {
 								_current_page = -1;
 								jQuery('.navigation-ajax').hide();
@@ -81,5 +83,4 @@
 		}
 
 	});
-
 })(jQuery);

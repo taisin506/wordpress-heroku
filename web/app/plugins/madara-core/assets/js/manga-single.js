@@ -1,17 +1,18 @@
 (function ($) {
 
-	$(document).ready(function () {
+	$(document).on('wp_manga_after_load_chapters_list', function () {
 
 		// accordion  view chap
-		jQuery(".listing-chapters_wrap ul.main li.has-child").append('<i class="icon ion-ios-plus-empty"></i>');
+		jQuery(".listing-chapters_wrap ul.main li.has-child").append('<i class="icon ion-md-add"></i>');
 
-		$(".wp-manga-section .listing-chapters_wrap ul.main > li.has-child").on('click', function (e) {
+		$(".listing-chapters_wrap ul.main > li.has-child").off('click');
+		$(".listing-chapters_wrap ul.main > li.has-child").on('click', function (e) {
 			var $this = $(this);
 			$(e.target).toggleClass("active").children("ul").slideToggle(300);
 		});
 	});
 
-	$(document).on('mouseover', '.ratings_stars', function () {
+	$(document).on('mouseover', '.allow_vote .ratings_stars', function () {
 		$(this).prevAll('.ratings_stars ').andSelf().removeClass('ion-ios-star-outline');
 		$(this).prevAll('.ratings_stars ').andSelf().removeClass('ion-ios-star-half');
 		$(this).prevAll('.ratings_stars ').andSelf().addClass('ion-ios-star');
@@ -21,7 +22,7 @@
 		$(this).nextAll('.ratings_stars ').addClass('ion-ios-star-outline');
 	});
 
-	$(document).on('mouseout', '.ratings_stars', function () {
+	$(document).on('mouseout', '.allow_vote .ratings_stars', function () {
 		$(this).prevAll().andSelf().removeClass('ion-ios-star').addClass('ion-ios-star-outline');
 		var all = $('.ratings_stars');
 		$.each(all, function (i, e) {
@@ -36,7 +37,7 @@
 		})
 	});
 
-	$(document).on('click', '.ratings_stars', function (e) {
+	$(document).on('click', '.allow_vote .ratings_stars', function (e) {
 
 		e.preventDefault();
 		var t = $(this);

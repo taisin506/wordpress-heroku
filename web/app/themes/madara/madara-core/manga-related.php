@@ -1,15 +1,16 @@
 <?php
 
 	$wp_manga_settings = get_option( 'wp_manga_settings' );
-	$related_by        = $wp_manga_settings['related_manga'];
+	$related_by        = $wp_manga_settings['related_by'];
 	$thumb_size        = array( 75, 106 );
-
+	
 	if ( $related_by ) {
 		$post_id = get_the_ID();
 
 		$related_args = array(
 			'post_type'      => 'wp-manga',
 			'post_status'    => 'publish',
+			'orderby' => 'rand',
 			'posts_per_page' => 4,
 			'post__not_in'   => array( $post_id ),
 		);

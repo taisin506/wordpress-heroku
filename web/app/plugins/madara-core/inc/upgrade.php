@@ -7,18 +7,48 @@
 
         public function __construct(){
 			$current_version = $this->get_latest_version();
+			
             if( $current_version < WP_MANGA_VER ){
 				
                 if( $current_version < 1.5){
 					$this->update_to_1_5();
+					set_transient('wp_manga_upgrading_version', 1.5);
+					return;
                 }
 				
 				if( $current_version < 1.503 ){
 					$this->update_to_1_5_0_3();
+					$this->update_latest_version( 1.503 );
 				}
 				
-				$this->update_latest_version( WP_MANGA_VER );
-            }elseif( get_transient( 'wp_manga_upgrading_completed' ) ){
+				if($current_version < 1.514){
+					
+					$this->update_to_1_5_1_4();
+					$this->update_latest_version( 1.514 );
+				}
+				
+				if($current_version < 1.53){
+					$this->update_to_1_5_3();
+					$this->update_latest_version( 1.53 );
+				}
+				
+				if($current_version < 1.533){
+					$this->update_to_1_5_3_3();
+					$this->update_latest_version( 1.533 );
+				}
+				
+				if($current_version < 1.55){
+					$this->update_to_1_5_5();
+					$this->update_latest_version( 1.55 );
+				}
+				
+				if($current_version < 1.615){
+					$this->update_to_1_6_1_5();
+					$this->update_latest_version( 1.615 );
+				}
+				
+				
+            } elseif( get_transient( 'wp_manga_upgrading_completed' ) ){
 
                 add_action( 'admin_notices', function(){
                     ?>
@@ -28,10 +58,35 @@
                     <?php
                     delete_transient( 'wp_manga_upgrading_completed' );
                 } );
-
-            }
-
+				$this->update_latest_version( get_transient('wp_manga_upgrading_version') );
+            } else {
+				if($current_version != WP_MANGA_VER){
+					$this->update_latest_version( WP_MANGA_VER );
+				}
+			}
         }
+		
+		private function update_to_1_5_5(){
+			$wp_manga_database = WP_MANGA_DATABASE::get_instance();
+			
+			$table_name      = $wp_manga_database->get_wpdb()->prefix . 'manga_volumes';
+			
+			if(!$wp_manga_database->column_exists($table_name, 'volume_index')){
+				$wp_manga_database->alter_add_column($table_name, 'volume_index', 'int default 0');
+			}
+			
+			$table_name      = $wp_manga_database->get_wpdb()->prefix . 'manga_chapters';
+			if(!$wp_manga_database->column_exists($table_name, 'chapter_status')){
+				$wp_manga_database->alter_add_column($table_name, 'chapter_status', 'tinyint default 0');
+			}
+		}
+		
+		private function update_to_1_5_3(){
+			// just re-save permalinks once
+			add_action('wp', function(){
+								flush_rewrite_rules();
+			});
+		}
 		
 		private function update_to_1_5(){
 			$unconverted_posts = $this->get_unconverted_posts( array( 'posts_per_page' => 1 ) );
@@ -63,6 +118,8 @@
 
 				add_action( 'wp_ajax_madara_core_convert_post', array( $this, 'convert' ) );
 				add_action( 'wp_ajax_madara_core_convert_post_end', array( $this, 'end' ) );
+			} else {
+				$this->update_latest_version( 1.503 );
 			}
 		}
 		
@@ -92,6 +149,46 @@
 					$sql = "CREATE INDEX $key ON $table_name $val";
 					$wp_manga_database->get_wpdb()->query($sql);
 				}
+			}
+		}
+		
+		/**
+		 * Upgrade DB to 1.5.1.4 version
+		 **/
+		private function update_to_1_5_1_4(){
+			$wp_manga_database = WP_MANGA_DATABASE::get_instance();
+			
+			$table_name      = $wp_manga_database->get_wpdb()->prefix . 'manga_chapters';
+			
+			if(!$wp_manga_database->column_exists($table_name, 'chapter_index')){
+				$wp_manga_database->alter_add_column($table_name, 'chapter_index', 'int default 0');
+			}
+		}
+		
+		/**
+		 * Upgrade DB to 1.5.3.3 version
+		 **/
+		private function update_to_1_5_3_3(){
+			$wp_manga_database = WP_MANGA_DATABASE::get_instance();
+			
+			$table_name      = $wp_manga_database->get_wpdb()->prefix . 'manga_chapters';
+			
+			if(!$wp_manga_database->column_exists($table_name, 'chapter_seo')){
+				$wp_manga_database->alter_add_column($table_name, 'chapter_seo', 'varchar(1000)');
+			}
+			if(!$wp_manga_database->column_exists($table_name, 'chapter_warning')){
+				$wp_manga_database->alter_add_column($table_name, 'chapter_warning', 'text	');
+			}
+		}
+		
+		private function update_to_1_6_1_5(){
+			$wp_manga_database = WP_MANGA_DATABASE::get_instance();
+			
+			$table_name      = $wp_manga_database->get_wpdb()->prefix . 'manga_chapters';
+			
+			if(!$wp_manga_database->column_exists($table_name, 'chapter_metas')){
+				$wp_manga_database->alter_add_column($table_name, 'chapter_metas', 'varchar(1000)');
+				// this column saves serializeed data of Chapter Metas
 			}
 		}
 
@@ -340,7 +437,7 @@
         }
 
         public function get_latest_version(){
-            return get_option( 'wp_manga_latest_version', 0 );
+            return get_option( 'wp_manga_latest_version', 1.4 );
         }
 
         public function is_manga_upgrading(){

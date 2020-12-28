@@ -87,7 +87,7 @@ class WP_MANGA_GOOGLE_UPLOAD {
 
 			if( isset( $token->error_description ) ){
 				//put error message to transient
-				set_transient('google_authorization_error', $token->error_description);
+				set_transient('google_authorization_error', $token->error_description, 1 * 60 * 60);
 			}
 
 			return false;
@@ -106,15 +106,20 @@ class WP_MANGA_GOOGLE_UPLOAD {
 		$google_refreshtoken = $this->googleRefreshToken;
 		if ( $google_refreshtoken ) {
 			foreach ( $upload['file'] as $file ) {
-				$dir = $upload['dir'].$file;
-				// $path = $upload['host'].$file;
+				$dir = $upload['dir'] . $file;
+				if(!file_exists($dir)){
+					$result['error'] = __('Images do not exist', WP_MANGA_TEXTDOMAIN);
+					return $result;
+				}
+				
 				$mime = $wp_manga_storage->mime_content_type( $file );
 				$image = $this->image_upload( $dir, $file , $mime );
 				$result[] = $this->blogspot_url_filter( (string) $image );
 			}
 			return $result;
 		} else {
-			return false;
+			$result['error'] = __('Please configure Google Refresh Token', WP_MANGA_TEXTDOMAIN);
+			return $result;
 		}
 	}
 
@@ -172,14 +177,17 @@ class WP_MANGA_GOOGLE_UPLOAD {
 		if( $raw ){
 			return $ret;
 		}
-
-		return simplexml_load_string( $ret );
+		
+		$xml = @simplexml_load_string( $ret );
+		if($xml) return $xml;
+		
+		return $ret;
 
 	}
 
 	function get_album_list(){
 
-		$url = 'https://picasaweb.google.com/data/feed/api/user/default/?fields=entry(id,title,gphoto:numphotos)';
+		$url = 'https://picasaweb.google.com/data/feed/api/user/default/?fields=entry(id,title,gphoto:numphotos)&deprecation-extension=true';
 
 		$result = $this->construct_curl( $url );
 
@@ -291,7 +299,7 @@ class WP_MANGA_GOOGLE_UPLOAD {
 			$album = 'default';
 		}
 
-		$url = 'https://picasaweb.google.com/data/feed/api/user/default/albumid/' . $album . '?imgmax=d';
+		$url = 'https://picasaweb.google.com/data/feed/api/user/default/albumid/' . $album . '?imgmax=d&deprecation-extension=true';
 
 		// need to be base64 file
 		// $base64 = $this->get_base64( $image_url );
@@ -372,7 +380,7 @@ class WP_MANGA_GOOGLE_UPLOAD {
 			return new WP_Error( 403, esc_html__('Not found album', WP_MANGA_TEXTDOMAIN ) );
 		}
 
-		$url = "https://picasaweb.google.com/data/feed/api/user/default/albumid/{$album_id}?imgmax=d";
+		$url = "https://picasaweb.google.com/data/feed/api/user/default/albumid/{$album_id}?imgmax=d&deprecation-extension=true";
 
 		$result = $this->construct_curl( $url );
 

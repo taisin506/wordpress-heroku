@@ -94,11 +94,16 @@ class WP_MANGA_FLICKR_UPLOAD
         if ( $check_access_token ) {
             foreach ($upload['file'] as $file) {
                 $path = $upload['dir'] . $file;
+				if(!file_exists($path)){
+					$result['error'] = __('Images do not exist', WP_MANGA_TEXTDOMAIN);
+					return $result;
+				}
                 $url_image = $this->image_upload( $path );
                 $result[] = $url_image;
             }
         } else {
-            return false;
+            $result['error'] = __('Flickr Access Token does not exist', WP_MANGA_TEXTDOMAIN);
+			return $result;
         }
 
         return $result;

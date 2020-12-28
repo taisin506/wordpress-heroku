@@ -417,7 +417,25 @@
 			});
 
 		});
-
+		
+		if($(window).width() <= 480){
+			jQuery('.grid9').slick({
+				lazyLoad: 'ondemand',
+				fade: false,
+				cssEase: 'ease-out',
+				dots: false,
+				autoplay: false,
+				arrows: true,
+				autoplaySpeed: 5000,
+				infinite: true,
+				speed: 300,
+				slidesToShow: 2,
+				slidesToScroll: 2,
+				adaptiveHeight: false
+			});
+		} else {
+			jQuery('.grid9').addClass('block');
+		}
 	});
 
 })

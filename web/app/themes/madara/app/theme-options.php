@@ -14,20 +14,24 @@
 		$madara_theme_options = array(
 			'sections' => array(
 				array(
-					'id'    => 'manga_general',
+					'id'    => 'manga_general_layout',
 					'title' => '<i class="fas fa-bolt"><!-- --></i>' . esc_html__( 'Manga General Layout', 'madara' ),
 				),
 				array(
+					'id'    => 'manga_general',
+					'title' => '<i class="fas fa-bolt"><!-- --></i>' . esc_html__( 'Manga General Settings', 'madara' ),
+				),
+				array(
 					'id'    => 'manga_archives',
-					'title' => '<i class="fas fa-bolt"><!-- --></i>' . esc_html__( 'Manga Archives Layout', 'madara' ),
+					'title' => '<i class="fas fa-bolt"><!-- --></i>' . esc_html__( 'Manga Archives Page', 'madara' ),
 				),
 				array(
 					'id'    => 'manga_single',
-					'title' => '<i class="fas fa-bolt"><!-- --></i>' . esc_html__( 'Manga Single Layout', 'madara' ),
+					'title' => '<i class="fas fa-bolt"><!-- --></i>' . esc_html__( 'Manga Detail Page', 'madara' ),
 				),
 				array(
 					'id'    => 'manga_reading',
-					'title' => '<i class="fas fa-bolt"><!-- --></i>' . esc_html__( 'Manga Reading Layout', 'madara' ),
+					'title' => '<i class="fas fa-bolt"><!-- --></i>' . esc_html__( 'Manga Reading Page', 'madara' ),
 				),
 			),
 			'settings' => array(
@@ -81,6 +85,53 @@
 					),
 					'condition' => 'manga_new_chapter:is(on)',
 				),
+				
+				array(
+					'id'      => 'manga_reader_setting',
+					'label'   => esc_html__( 'Reader Settings', 'madara' ),
+					'desc'    => esc_html__( 'Enable "Reading Settings" tab in User Settings dashboard', 'madara' ),
+					'std'     => 'on',
+					'type'    => 'on-off',
+					'section' => 'manga_general'
+				),
+                
+                array(
+					'id'      => 'manga_bookmark_list_orderby',
+					'label'   => esc_html__( 'Manga Bookmark List - Order By', 'madara' ),
+					'desc'    => esc_html__( 'By default, Bookmarked List items are ordered by the time an item is added to the list', 'madara' ),
+					'std'     => '',
+					'type'    => 'select',
+					'choices' => array(
+						array(
+							'value' => '',
+							'label' => esc_html__( 'Default (bookmarked time)', 'madara' )
+						),
+						array(
+							'value' => 'update',
+							'label' => esc_html__( 'Manga Latest Update time', 'madara' )
+						)
+					),
+					'section' => 'manga_general',
+				),
+				
+				array(
+					'id'      => 'manga_bookmark_list_order',
+					'label'   => esc_html__( 'Manga Bookmark List - Order', 'madara' ),
+					'desc'    => esc_html__( 'Order of the items in the Bookmark List in User Settings page', 'madara' ),
+					'std'     => 'oldest_firt',
+					'type'    => 'select',
+					'choices' => array(
+						array(
+							'value' => 'oldest_first',
+							'label' => esc_html__( 'Oldest First', 'madara' )
+						),
+						array(
+							'value' => 'newest_first',
+							'label' => esc_html__( 'Newest First', 'madara' )
+						)
+					),
+					'section' => 'manga_general',
+				),
 
 				array(
 					'id'      => 'manga_main_top_sidebar_container',
@@ -106,7 +157,7 @@
 							'src'   => get_parent_theme_file_uri( '/images/options/sidebar/sidebar-custom-width.png' ),
 						)
 					),
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -115,7 +166,7 @@
 					'desc'    => esc_html__( 'Upload background image for Manga Main Top Sidebar', 'madara' ),
 					'std'     => '',
 					'type'    => 'background',
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -124,7 +175,7 @@
 					'desc'    => esc_html__( 'Padding in Manga Main Top Sidebar. Default value is 50 0 20 0 & unit is px', 'madara' ),
 					'std'     => '',
 					'type'    => 'spacing',
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -151,7 +202,7 @@
 							'src'   => get_parent_theme_file_uri( '/images/options/sidebar/sidebar-custom-width.png' ),
 						)
 					),
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -160,7 +211,7 @@
 					'desc'    => esc_html__( 'Upload background image for Manga Main Top Second Sidebar', 'madara' ),
 					'std'     => '',
 					'type'    => 'background',
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -169,7 +220,7 @@
 					'desc'    => esc_html__( 'Padding in Manga Main Top Second Sidebar. Default value is 50 0 20 0 & unit is px', 'madara' ),
 					'std'     => '',
 					'type'    => 'spacing',
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -196,7 +247,7 @@
 							'src'   => get_parent_theme_file_uri( '/images/options/sidebar/sidebar-custom-width.png' ),
 						)
 					),
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -205,7 +256,7 @@
 					'desc'    => esc_html__( 'Upload background image for Manga Main Bottom Sidebar', 'madara' ),
 					'std'     => '',
 					'type'    => 'background',
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -214,7 +265,7 @@
 					'desc'    => esc_html__( 'Padding in Manga Main Bottom Sidebar. Default value is 50 0 20 0 & unit is px', 'madara' ),
 					'std'     => '',
 					'type'    => 'spacing',
-					'section' => 'manga_general',
+					'section' => 'manga_general_layout',
 				),
 
 				array(
@@ -323,6 +374,34 @@
 				),
 				
 				array(
+					'id'      => 'manga_archives_item_type_icon',
+					'label'   => esc_html__( 'Manga Type Icon', 'madara' ),
+					'desc'    => esc_html__( 'If your site has different types of manga (Comic, Novel, Drama) and you need an icon to differentiate those, turn this on', 'madara' ),
+					'std'     => 'off',
+					'type'    => 'on-off',
+					'section' => 'manga_archives'
+				),
+				
+				array(
+					'id'      => 'manga_badge_position',
+					'label'   => esc_html__( 'Badge Position', 'madara' ),
+					'desc'    => esc_html__( 'Choose where to show the badge', 'madara' ),
+					'std'     => '1',
+					'type'    => 'select',
+					'section' => 'manga_archives',
+					'choices' => array(
+						array(
+							'value' => 1,
+							'label' => esc_html__( 'Before title', 'madara' ),
+						),
+						array(
+							'value' => 2,
+							'label' => esc_html__( 'Before thumbnail', 'madara' ),
+						)
+					)
+				),
+				
+				array(
 					'id'      => 'manga_archives_item_volume',
 					'label'   => esc_html__( 'Show Chapter Volume', 'madara' ),
 					'desc'    => esc_html__( 'Show Chapter Volume information', 'madara' ),
@@ -342,16 +421,35 @@
 
 				array(
 					'id'      => 'manga_profile_background',
-					'label'   => esc_html__( 'Manga Profiles Background', 'madara' ),
-					'desc'    => esc_html__( 'Upload your background image for Single Manga Profiles', 'madara' ),
+					'label'   => esc_html__( 'Manga Single - Background', 'madara' ),
+					'desc'    => esc_html__( 'Upload background image used in Manga detail page', 'madara' ),
 					'std'     => '',
 					'type'    => 'background',
+					'section' => 'manga_single',
+				),
+				
+				array(
+					'id'      => 'manga_single_meta_author',
+					'label'   => esc_html__( 'Manga Single - Meta Tags for Authors', 'madara' ),
+					'desc'    => esc_html__( 'Use Post Author (default WordPress Author) or Manga Authors in the Meta Tags', 'madara' ),
+					'std'     => 'wp_author',
+					'type'    => 'select',
+					'choices' => array(
+						array(
+							'value' => 'wp_author',
+							'label' => esc_html__( 'WordPress Post Author', 'madara' ),
+						),
+						array(
+							'value' => 'manga_authors',
+							'label' => esc_html__( 'Manga Authors', 'madara' ),
+						)
+						),
 					'section' => 'manga_single',
 				),
 
 				array(
 					'id'      => 'manga_single_breadcrumb',
-					'label'   => esc_html__( 'Manga Single Breadcrumb', 'madara' ),
+					'label'   => esc_html__( 'Manga Single - Breadcrumb', 'madara' ),
 					'desc'    => esc_html__( 'Enable Breadcrumb on Manga Single page', 'madara' ),
 					'std'     => 'on',
 					'type'    => 'on-off',
@@ -371,6 +469,14 @@
 					'id'      => 'manga_single_chapters_list',
 					'label'   => esc_html__( 'Manga Single Show More Chapter', 'madara' ),
 					'desc'    => esc_html__( 'Enable Show More button in Manga Chapters List', 'madara' ),
+					'std'     => 'on',
+					'type'    => 'on-off',
+					'section' => 'manga_single',
+				),
+				
+				array(
+					'id'      => 'init_links_enabled',
+					'label'   => esc_html__( 'Show "Read First", "Read Last" button', 'madara' ),
 					'std'     => 'on',
 					'type'    => 'on-off',
 					'section' => 'manga_single',
@@ -401,11 +507,20 @@
 						)
 					),
 				),
+				
+				array(
+					'id'      => 'manga_detail_lazy_chapters',
+					'label'   => esc_html__( 'Lazy-load chapters list', 'madara' ),
+					'std'     => 'on',
+					'type'    => 'on-off',
+					'section' => 'manga_single',
+					'desc'    => esc_html__('If you manga/novel has a lot of chapters, the chapters list will load too long. Lazy-load it will improve the performance. However, it will not be cached', 'madara')
+				),
 
 				array(
 					'id'      => 'manga_chapters_order',
 					'label'   => esc_html__( 'Manga Single - Chapters Order', 'madara' ),
-					'desc'    => esc_html__( 'Chapters order in Manga Single', 'madara' ),
+					'desc'    => esc_html__( 'Set chapters order in Manga Single and other page where chapters are listed. Order By Name works, but low performance. Consider using Order by Custom Index', 'madara' ),
 					'std'     => 'name_desc',
 					'type'    => 'select',
 					'section' => 'manga_single',
@@ -426,6 +541,33 @@
 							'value' => 'date_desc',
 							'label' => esc_html__( 'Latest to oldest by Time', 'madara' ),
 						),
+						array(
+							'value' => 'index_desc',
+							'label' => esc_html__( 'Custom Index Value - Bigger to Smaller', 'madara' ),
+						),
+						array(
+							'value' => 'index_asc',
+							'label' => esc_html__( 'Custom Index Value - Smaller to Bigger', 'madara' ),
+						),
+					),
+				),
+				
+				array(
+					'id'      => 'manga_rank_views',
+					'label'   => esc_html__( 'Manga Views Display', 'madara' ),
+					'desc'    => esc_html__( 'Display monthly views or all time views', 'madara' ),
+					'std'     => 'monthly',
+					'type'    => 'select',
+					'section' => 'manga_single',
+					'choices' => array(
+						array(
+							'value' => 'monthly',
+							'label' => esc_html__( 'Monthly', 'madara' ),
+						),
+						array(
+							'value' => 'alltime',
+							'label' => esc_html__( 'All Time', 'madara' ),
+						)
 					),
 				),
 
@@ -450,7 +592,7 @@
 				array(
 					'id'        => 'seo_chapter_title',
 					'label'     => esc_html__( 'SEO - Manga Chapter Title', 'madara' ),
-					'desc'      => esc_html__( 'Custom Title Meta for Single Manga Reading page. Use tag %title% for current Manga Title, %chapter% for current Manga Chapter. When using with Yoast SEO, this will override the meta title in Yoast', 'madara' ),
+					'desc'      => esc_html__( 'Custom Title Meta for Single Manga Reading page. Use tag %title% for current Manga Title, %chapter% for current Manga Chapter, %chapter_index% for current Chapter Index. When using with Yoast SEO, this will override the meta title in Yoast', 'madara' ),
 					'std'       => '',
 					'type'      => 'text',
 					'section'   => 'manga_single',
@@ -459,20 +601,12 @@
 				array(
 					'id'        => 'seo_chapter_desc',
 					'label'     => esc_html__( 'SEO - Manga Chapter Description', 'madara' ),
-					'desc'      => esc_html__( 'Custom Description Meta for Single Manga Reading page. Use tag %title% for current Manga Title, %chapter% for current Manga Chapter, %summary% for Manga excerpt or first paragraph in a Novel chapter. When using with Yoast SEO, this will override the meta description in Yoast', 'madara' ),
+					'desc'      => esc_html__( 'Custom Description Meta for Single Manga Reading page. Use tag %title% for current Manga Title, %chapter% for current Manga Chapter, %chapter_index% for current Chapter Index, %summary% for Manga excerpt or first paragraph in a Novel chapter. When using with Yoast SEO, this will override the meta description in Yoast', 'madara' ),
 					'std'       => '',
 					'type'      => 'text',
 					'section'   => 'manga_single',
 				),
-
-				array(
-					'id'      => 'manga_reading_dark_mode',
-					'label'   => esc_html__( 'Dark Mode', 'madara' ),
-					'desc'    => esc_html__( 'Turn On/Off Dark Mode for Manga Reading Page. Default Off.', 'madara' ),
-					'std'     => 'off',
-					'type'    => 'on-off',
-					'section' => 'manga_reading',
-				),
+				
 				array(
 					'id'      => 'manga_reading_discussion',
 					'label'   => esc_html__( 'Enable Reading Discussion', 'madara' ),
@@ -480,6 +614,16 @@
 					'std'     => 'on',
 					'type'    => 'on-off',
 					'section' => 'manga_reading',
+				),
+				
+				array(
+					'id'      => 'manga_reading_discussion_heading',
+					'label'   => esc_html__( 'Enable Reading Discussion Heading', 'madara' ),
+					'desc'    => esc_html__( 'Show heading for the Comments Form', 'madara' ),
+					'std'     => 'on',
+					'type'    => 'on-off',
+					'section' => 'manga_reading',
+					'condition' => 'manga_reading_discussion:is(on)',
 				),
 				
 				array(
@@ -511,17 +655,44 @@
 				
 				array(
 					'id'        => 'manga_reading_text_sidebar',
-					'label'     => esc_html__( 'Manga Text Chapter Reading - Side Column', 'madara' ),
+					'label'     => esc_html__( 'Manga Text Chapter - Side Column', 'madara' ),
 					'desc'      => esc_html__('In Text Chapter reading page, move sidebar & discussion to the side column, instead of at bottom of content', 'madara'),
 					'std'       => 'off',
 					'type'      => 'on-off',
 					'section'   => 'manga_reading'
 				),
+				
+				array(
+					'id'        => 'chapter_heading',
+					'label'     => esc_html__( 'Chapter Heading', 'madara' ),
+					'desc'      => esc_html__('Show Chapter Heading', 'madara'),
+					'std'       => 'on',
+					'type'      => 'on-off',
+					'section'   => 'manga_reading'
+				),
+				
+				array(
+					'id'        => 'minimal_reading_page',
+					'label'     => esc_html__( 'Minimal Reading Layout', 'madara' ),
+					'desc'      => esc_html__('Hide header and other parts to focus in reading content', 'madara'),
+					'std'       => 'off',
+					'type'      => 'on-off',
+					'section'   => 'manga_reading'
+				),
+				
+				array(
+					'id'        => 'manga_reading_text_fontsize',
+					'label'     => esc_html__( 'Manga Text Chapter - Font Size', 'madara' ),
+					'desc'      => esc_html__('Set font size (in pixels) for text. By default, it takes global font-size', 'madara'),
+					'std'       => '',
+					'type'      => 'text',
+					'section'   => 'manga_reading'
+				),
 
 				array(
 					'id'      => 'manga_reading_style',
-					'label'   => esc_html__( 'Reading Style', 'madara' ),
-					'desc'    => '',
+					'label'   => esc_html__( 'Manga Image Chapter - Reading Style', 'madara' ),
+					'desc'    => esc_html__( 'Choose reading style for Image Chapter', 'madara' ),
 					'std'     => 'paged',
 					'type'    => 'select',
 					'section' => 'manga_reading',
@@ -533,6 +704,25 @@
 						array(
 							'value' => 'list',
 							'label' => esc_html__( 'List', 'madara' ),
+						),
+					),
+				),
+				
+				array(
+					'id'      => 'manga_chapters_select_order',
+					'label'   => esc_html__( 'Chapters Order in Reading Navigation', 'madara' ),
+					'desc'    => esc_html__( 'Should we keep the order in detail page, or reverse it?', 'madara' ),
+					'std'     => 'default',
+					'type'    => 'select',
+					'section' => 'manga_reading',
+					'choices' => array(
+						array(
+							'value' => 'default',
+							'label' => esc_html__( 'Use Chapters Order in Detail page', 'madara' ),
+						),
+						array(
+							'value' => 'reverse',
+							'label' => esc_html__( 'Reverse', 'madara' ),
 						),
 					),
 				),
@@ -574,6 +764,15 @@
 					),
 					'condition' => 'manga_reading_style:is(paged)',
 				),
+				
+				array(
+					'id'        => 'manga_reading_full_width',
+					'label'     => esc_html__( 'Full Width (No Left/Right Padding)', 'madara' ),
+					'desc'      => esc_html__( 'Disable Left/Right padding when reading chapter', 'madara' ),
+					'std'       => 'on',
+					'type'      => 'on-off',
+					'section'   => 'manga_reading'
+				),
 
 				array(
 					'id'      => 'manga_reading_related',
@@ -604,14 +803,48 @@
 					'section' => 'manga_reading',
 					'desc'    => esc_html__( 'Use preloaded images for chapter without reloading or using ajax to get next/prev image', 'madara' )
 				),
+				
+				array(
+					'id'      => 'manga_reading_sticky_header',
+					'label'   => esc_html__( 'Sticky Header', 'madara' ),
+					'desc'    => '',
+					'std'     => '',
+					'type'    => 'select',
+					'section' => 'manga_reading',
+					'choices'   => array(
+						array(
+							'value' => '',
+							'label' => esc_html__( 'Default (use setting in Theme Options > Header > Sticky Menu', 'madara' ),
+						),
+						array(
+							'value' => 'on',
+							'label' => esc_html__( 'Yes', 'madara' ),
+						),
+						array(
+							'value' => 'off',
+							'label' => esc_html__( 'No', 'madara' ),
+						)
+					),
+				),
 
 				array(
 					'id'      => 'manga_reading_sticky_navigation',
-					'label'   => esc_html__( 'Sticky Reading Navigation', 'madara' ),
+					'label'   => esc_html__( 'Sticky Chapter Navigation (Wide Screens)', 'madara' ),
 					'desc'    => '',
 					'std'     => 'on',
 					'type'    => 'on-off',
 					'section' => 'manga_reading',
+					'condition' => 'manga_reading_sticky_header:not(off)'
+				),
+				
+				array(
+					'id'      => 'manga_reading_sticky_navigation_mobile',
+					'label'   => esc_html__( 'Enable Sticky Chapter Navigation for mobile screens ( < 768px)', 'madara' ),
+					'desc'    => '',
+					'std'     => 'off',
+					'type'    => 'on-off',
+					'section' => 'manga_reading',
+					'condition' => 'manga_reading_sticky_header:not(off)'
 				),
 
 				array(
@@ -664,11 +897,43 @@
 				array(
 					'id'      => 'madara_reading_history_items',
 					'label'   => esc_html__( 'Manga Reading History Items', 'madara' ),
-					'desc'    => esc_html__( 'Number of Manga Items at most to be saved in Manga Reading History', 'madara' ),
+					'desc'    => esc_html__( 'Number of Manga Items at most to be saved in Manga Reading History. If you want to store unlimited number of items, enter -1. Please note that you have a lot of mangas, it would effect performance', 'madara' ),
 					'std'     => '12',
 					'type'    => 'text',
 					'section' => 'manga_reading',
 					'condition' => 'madara_reading_history:is(on)',
+				),
+				array(
+					'id'      => 'manga_search_exclude_tags',
+					'label'   => esc_html__( 'Manga Search - Exclude Tags', 'madara' ),
+					'desc'    => esc_html__( 'Exclude mangas from Search Results if they have these tags. Enter a list of tag slug, separated by comma', 'madara' ),
+					'type'    => 'text',
+					'section' => 'search',
+				),
+				
+				array(
+					'id'      => 'manga_search_exclude_genres',
+					'label'   => esc_html__( 'Manga Search - Exclude Genres', 'madara' ),
+					'desc'    => esc_html__( 'Exclude mangas from Search Results if they have these genres. Enter a list of genre slug, separated by comma', 'madara' ),
+					'type'    => 'text',
+					'section' => 'search',
+				),
+				
+				array(
+					'id'      => 'manga_search_exclude_authors',
+					'label'   => esc_html__( 'Manga Search - Exclude Authors', 'madara' ),
+					'desc'    => esc_html__( 'Exclude mangas from Search Results if they have these genres. Enter a list of author slug, separated by comma', 'madara' ),
+					'type'    => 'text',
+					'section' => 'search',
+				),
+                
+                array(
+					'id'      => 'madara_ajax_search',
+					'label'   => esc_html__( 'Ajax Search', 'madara' ),
+					'desc'    => esc_html__( 'Enable or Disable Ajax Search for Manga', 'madara' ),
+					'std'     => 'on',
+					'type'    => 'on-off',
+					'section' => 'search',
 				),
 			)
 		);

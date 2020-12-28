@@ -42,7 +42,7 @@
 
 	<?php if ( $madara_showtags == 'on' && has_tag() ): ?>
         <div class="item-tags">
-            <h5>Tags: </h5>
+            <h5><?php esc_html_e('Tags: ', 'madara');?></h5>
 			<?php the_tags( '<ul class="list-inline">
                 <li>', '</li><li>', '</li></ul>' );
 			?>

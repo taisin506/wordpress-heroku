@@ -1,10 +1,10 @@
 // JavaScript Document
 (function () {
-	tinymce.PluginManager.add('manga_listing', function (editor, url) {
-		editor.addButton('manga_listing', {
+	tinymce.PluginManager.add('mangas_listing', function (editor, url) {
+		editor.addButton('mangas_listing', {
 			text: 'Manga Listing',
-			id: 'madara_shortcode_manga_listing',
-			tooltip: 'Mandara Manga Listing',
+			id: 'madara_shortcode_mangas_listing',
+			tooltip: 'WP Manga - Listing',
 			onclick: function () {
 				// Open window
 				var body = [

@@ -68,12 +68,16 @@ class Madara_Sitemap_Provider implements WPSEO_Sitemap_Provider{
 		
 		$results = $wpdb->get_results($sql);
 		
+		global $_wp_manga_wpseo_sitemap;
+		$_wp_manga_wpseo_sitemap = true;
 		foreach($results as $result){
 			$manga_id = $result->post_id;
 			
 			// check if $manga is active
 			if(get_post_status($manga_id) == 'publish'){
 				$chapter_slug = $result->chapter_slug;
+				
+				
 				
 				$link = $wp_manga_functions->build_chapter_url( $manga_id, $chapter_slug );
 				
@@ -82,9 +86,10 @@ class Madara_Sitemap_Provider implements WPSEO_Sitemap_Provider{
 						'mod' => $result->date_gmt,
 						'chf' => 'daily', // Deprecated, kept for backwards data compat. R.
 						'pri' => 1, // Deprecated, kept for backwards data compat. R.
-						'images' => 1);
+						'images' => array());
 			}
 		}
+		$_wp_manga_wpseo_sitemap = false;
 		
 		return $urls;
 	}

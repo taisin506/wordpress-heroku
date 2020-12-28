@@ -91,12 +91,12 @@
 
 	add_filter( 'madara_theme_document_url', 'madara_online_document' );
 	function madara_online_document( $url ) {
-		return '//demo.mangabooth.com/doc';
+		return 'http://demo.mangabooth.com/doc';
 	}
 
 	add_filter( 'madara_theme_support_url', 'madara_online_support' );
 	function madara_online_support( $url ) {
-		return '//themeforest.net/user/wpstylish';
+		return 'https://themeforest.net/user/wpstylish';
 	}
 
 	add_action( 'wp_footer', 'madara_go_to_top' );
@@ -106,7 +106,7 @@
 		if ( $is_gototop != 'off' ) {
 			?>
             <div class="go-to-top active">
-                <i class="ion-android-arrow-up"></i>
+                <i class="icon ion-md-arrow-up"></i>
             </div>
 			<?php
 		}
@@ -187,57 +187,54 @@
 
 	function madara_output_background_options( $option = '', $echo = 0 ) {
 
-		$header_style = '';
+		$bg_style = '';
 
 		if ( $option != '' ) {
 
-			$header_bg = Madara::getOption( $option );
+			$bg_options = Madara::getOption( $option );
 			
-			
+			if ( is_array( $bg_options ) ) {
+				$bg_options_repeat     = isset( $bg_options['background-repeat'] ) ? $bg_options['background-repeat'] : '';
+				$bg_options_attachment = isset( $bg_options['background-attachment'] ) ? $bg_options['background-attachment'] : '';
+				$bg_options_position   = isset( $bg_options['background-position'] ) ? $bg_options['background-position'] : '';
+				$bg_options_size       = isset( $bg_options['background-size'] ) ? $bg_options['background-size'] : '';
+				$bg_options_image      = isset( $bg_options['background-image'] ) ? $bg_options['background-image'] : '';
+				$bg_options_color      = isset( $bg_options['background-color'] ) ? $bg_options['background-color'] : '';
 
-			if ( is_array( $header_bg ) ) {
-				$header_bg_repeat     = isset( $header_bg['background-repeat'] ) ? $header_bg['background-repeat'] : '';
-				$header_bg_attachment = isset( $header_bg['background-attachment'] ) ? $header_bg['background-attachment'] : '';
-				$header_bg_position   = isset( $header_bg['background-position'] ) ? $header_bg['background-position'] : '';
-				$header_bg_size       = isset( $header_bg['background-size'] ) ? $header_bg['background-size'] : '';
-				$header_bg_image      = isset( $header_bg['background-image'] ) ? $header_bg['background-image'] : '';
-				$header_bg_color      = isset( $header_bg['background-color'] ) ? $header_bg['background-color'] : '';
+				if ( ! empty( $bg_options ) ) {
 
-				if ( ! empty( $header_bg ) ) {
-
-					if ( $header_bg_color != '' ) {
-						$header_style .= 'background-color:' . $header_bg_color . '; ';
+					if ( $bg_options_color != '' ) {
+						$bg_style .= 'background-color:' . $bg_options_color . '; ';
 					}
 
-					if ( $header_bg_image != '' ) {
-						$header_style .= 'background-image:url(' . esc_url( $header_bg_image ) . '); ';
-					}
+					if ( $bg_options_image != '' ) {
+						$bg_style .= 'background-image:url(' . esc_url( $bg_options_image ) . '); ';
 
-					if ( $header_bg_repeat != '' ) {
-						$header_style .= 'background-repeat:' . $header_bg_repeat . '; ';
-					}
+						if ( $bg_options_repeat != '' ) {
+							$bg_style .= 'background-repeat:' . $bg_options_repeat . '; ';
+						}
 
-					if ( $header_bg_attachment != '' ) {
-						$header_style .= 'background-attachment:' . $header_bg_attachment . '; ';
-					}
+						if ( $bg_options_attachment != '' ) {
+							$bg_style .= 'background-attachment:' . $bg_options_attachment . '; ';
+						}
 
-					if ( $header_bg_size != '' ) {
-						$header_style .= 'background-size:' . $header_bg_size . '; ';
-					}
+						if ( $bg_options_size != '' ) {
+							$bg_style .= 'background-size:' . $bg_options_size . '; ';
+						}
 
-					if ( $header_bg_position != '' ) {
-						$header_style .= 'background-position:' . $header_bg_position . '; ';
+						if ( $bg_options_position != '' ) {
+							$bg_style .= 'background-position:' . $bg_options_position . '; ';
+						}
 					}
-
 				}
 			}
 
 		}
 
 		if ( $echo == 1 ) {
-			echo esc_html( $header_style );
+			echo esc_html( $bg_style );
 		} else {
-			return $header_style;
+			return $bg_style;
 		}
 	}
 
@@ -307,8 +304,13 @@
 
 	add_action( 'wp_footer', 'manga_adult_content' );
 	function manga_adult_content() {
-
-		if ( function_exists( 'is_manga_single' ) && is_manga_single() ) {
+		global $wp_manga_setting;
+			
+		if(!isset($wp_manga_setting)){
+			return;
+		}
+		
+		if ( is_manga_single() ||  is_manga_reading_page() ) {
 			$manga_adult_content = get_post_meta( get_the_ID(), 'manga_adult_content', true );
 			$message_html        = '<p class="manga-adult-title">' . get_the_title() . '</p>';
 			$message_html        .= '<p class="adult-message">' . esc_html__( 'contains themes or scenes that may not be suitable for very young readers thus is blocked for their protection.', 'madara' ) . '</p>';

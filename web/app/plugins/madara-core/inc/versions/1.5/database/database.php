@@ -176,7 +176,8 @@
 				if( isset( $column ) ){
 
 					//bring column name to be key of results array
-					$names = array_column( $results, $column );
+					
+					$names = array_map(function($element) use($column ){return $element[$column ];}, $results);
 
 					natcasesort( $names );
 
@@ -241,7 +242,6 @@
 		}
 
 		function alter_add_column( $table_name, $column_name, $column_data ){
-			error_log( $column_name );
 			$query = $this->wpdb->prepare(
 				"ALTER TABLE %s
 				ADD COLUMN %s %s",

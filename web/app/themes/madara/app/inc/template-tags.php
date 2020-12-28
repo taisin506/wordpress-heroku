@@ -79,7 +79,7 @@
 		$html = '<div class="icon-area">';
 
 		if ( is_sticky() ) {
-			$html .= '<span class="item-icon ion-pin"></span>';
+			$html .= '<span class="item-icon icon ion-md-pin"></span>';
 		}
 
 		$html .= '</div>';
@@ -106,25 +106,18 @@
 			$badges_html .= esc_html__( '18+', 'madara' );
 			$badges_html .= '</span>';
 		}
-
-		if ( $badges == 'new' ) {
-
-			$badges_html .= '<span class="manga-title-badges new">';
-			$badges_html .= esc_html__( 'NEW', 'madara' );
-			$badges_html .= '</span>';
-
-		} else if ( $badges == 'hot' ) {
-
-			$badges_html .= '<span class="manga-title-badges hot">';
-			$badges_html .= esc_html__( 'HOT', 'madara' );
-			$badges_html .= '</span>';
-
-		} else if ( $badges == 'custom' ) {
-
-			$custom_badges = get_post_meta( $post_id, 'manga_custom_badges', true );
-			if ( $custom_badges != '' ) {
-				$badges_html .= '<span class="manga-title-badges custom">';
-				$badges_html .= esc_html( $custom_badges );
+		
+		if($badges != 'no'){
+			if ( $badges == 'custom' ) {
+				$custom_badges = get_post_meta( $post_id, 'manga_custom_badges', true );
+				if ( $custom_badges != '' ) {
+					$badges_html .= '<span class="manga-title-badges custom ' . esc_attr(sanitize_title($custom_badges)) . '">';
+					$badges_html .= esc_html( $custom_badges );
+					$badges_html .= '</span>';
+				}
+			} else {
+				$badges_html .= '<span class="manga-title-badges ' . $badges . '">';
+				$badges_html .= strtoupper($badges);
 				$badges_html .= '</span>';
 			}
 		}
@@ -150,15 +143,15 @@
 		$ads = $ads->get_ad( $ad_pos, $class );
 
 		if ( $echo == 1 ) {
-			echo apply_filters( 'madara_ads_content', do_shortcode( $ads ) );
+			echo apply_filters( 'madara_ads_content', do_shortcode( $ads ), $ad_pos );
 		} else {
-			return apply_filters( 'madara_ads_content', do_shortcode( $ads ) );
+			return apply_filters( 'madara_ads_content', do_shortcode( $ads ), $ad_pos );
 		}
 
 	}
 
 	function madara_default_heading_icon( $echo = 1 ) {
-		$def_icon = Madara::getOption( 'static_icon', 'ion-ios-star' );
+		$def_icon = Madara::getOption( 'static_icon', 'icon ion-ios-star' );
 		if ( $echo == 1 ) {
 			echo esc_html( $def_icon );
 		} else {

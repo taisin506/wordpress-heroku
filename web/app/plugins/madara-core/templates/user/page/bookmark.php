@@ -7,7 +7,9 @@
 	global $wp_manga_chapter, $wp_manga_functions;
 
 	$user_id       = get_current_user_id();
-	$bookmarks     = get_user_meta( $user_id, '_wp_manga_bookmark', true );
+    
+	$bookmarks     = $wp_manga_functions->get_bookmarked_mangas($user_id);
+    
 	$reading_style = $GLOBALS['wp_manga_functions']->get_reading_style();
 	$reading_style = ! empty( $reading_style ) ? $reading_style : 'paged';
 
@@ -24,6 +26,7 @@
     <tbody>
 
 	<?php if ( ! empty( $bookmarks ) ) {
+		$bookmarks = array_reverse($bookmarks);
 		foreach ( $bookmarks as $bookmark ) {
 
 			$post = get_post( intval( $bookmark['id'] ) );

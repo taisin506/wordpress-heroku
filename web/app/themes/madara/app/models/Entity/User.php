@@ -27,12 +27,6 @@
 			return $user_avatar;
 		}
 
-		public function getUserEmail() {
-			$user_email = '';
-
-			return $user_email;
-		}
-
 		public function getUserWebsite() {
 			$user_website = '';
 

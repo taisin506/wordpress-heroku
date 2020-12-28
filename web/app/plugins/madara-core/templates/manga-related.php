@@ -103,7 +103,7 @@
                 <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                     <div class="c-blog__heading style-2 font-heading">
                         <h4>
-                            <i class="ion-ios-star"></i>
+                            <i class="icon ion-ios-star"></i>
 							<?php esc_html_e( 'YOU MAY ALSO LIKE', WP_MANGA_TEXTDOMAIN ) ?></h4>
                     </div>
                 </div>

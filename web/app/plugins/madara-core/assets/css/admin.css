@@ -6,7 +6,7 @@
     min-width: 260px;
 }
 
-#blogspot-search-album {
+#blogspot-search-album, #gphotos-search-album {
     margin: 0 !important;
     padding: 0px 5px;
     height: 25px;
@@ -84,7 +84,7 @@ span.wp-manga-chapter-type-label.text {
     display: none;
 }
 
-#wp-manga-modal-content .wp-manga-modal-body > .wp-manga-modal-volume, #wp-manga-modal-content .wp-manga-modal-body > .wp-manga-chapter-content-editor {
+#wp-manga-modal-content .wp-manga-modal-body > .wp-manga-chapter-amp-height, #wp-manga-modal-content .wp-manga-modal-body > .wp-manga-modal-volume, #wp-manga-modal-content .wp-manga-modal-body > .wp-manga-chapter-content-editor, #wp-manga-modal-content .wp-manga-modal-body > .wp-manga-chapter-content-editor, #wp-manga-modal-content .wp-manga-modal-body > .wp-manga-modal-seo-desc, #wp-manga-modal-content .wp-manga-modal-body > .wp-manga-modal-warning-text {
     display: block;
 }
 
@@ -544,6 +544,9 @@ a#wp-manga-delete-chapter:hover .ion-ios-close:before {
     border-color: #d9534f;
     box-shadow: 0 1px 0 #ad2622;
 }
+
+.manga-single-volume li .chapter_select_item{position: absolute; left: -10px; top: 50%; margin-top: -7px}
+#btn_do_multi_action{padding: 3px 10px 7px;    margin: 0 10px;    cursor: pointer;}
 
 .volume-list {
     margin-top: 5px;
@@ -1080,3 +1083,24 @@ input#search-chapter {
         -webkit-transform: scaleY(1.0);
     }
 }
+
+.post-type-wp-manga .wp-manga-content .chapter-list{max-height: 500px; overflow-x: auto;}
+	
+#wp-manga-modal-content .block{display: block; margin-bottom: 10px}
+#chapter-upload-more{    margin: 20px;    padding: 20px;    background: #f1f1f1;    border: 1px solid #CCC;}
+#btn_upload_chapter_images{border: none;padding: 5px 15px; cursor: pointer;    background: #0073ab;    color: #FFF;}
+#btn_upload_chapter_images.disable{}
+#upload_chapter_images_message{color:#157890}
+#upload_chapter_images_message.error{color:#FF0000}
+label.input-label {    display: inline-block;    width: 150px;}
+.chapter-status.uploading{background:#FF0000; color: #FFF; padding:3px 10px; border-radius: 3px;     background: #d86262;    color: #FFF;
+    padding: 2px 4px 4px;    border-radius: 3px;}
+
+.wp-manga_page_wp-manga-settings .wp-manga-wrap form{width:70%}
+@media (max-width: 992px) {
+	.wp-manga_page_wp-manga-settings .wp-manga-wrap form{width:100%}
+}
+.wp-manga_page_wp-manga-settings .wp-manga-wrap .section{margin-bottom: 40px; background: #FFF; padding: 20px;}
+.wp-manga_page_wp-manga-settings .wp-manga-wrap h2.title{border-bottom: 1px solid #d3d3d3; padding-bottom: 20px}
+
+#wp-manga-modal-content .desc{color: #999;padding: 20px 0;}

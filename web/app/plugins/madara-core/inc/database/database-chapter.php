@@ -34,8 +34,10 @@
 
 			$args['date']     = current_time( 'mysql' );
 			$args['date_gmt'] = current_time( 'mysql', true );
+			
+			$insertData = apply_filters( 'wp_manga_chapter_insert_args', $args );
 
-			$chapter_id = $this->insert( $this->table, $args );
+			$chapter_id = $this->insert( $this->table, $insertData );
 
 			do_action( 'manga_chapter_inserted', $chapter_id, $args );
 
@@ -43,10 +45,18 @@
 
 		}
 
-		function get_chapters( $args, $search = false, $orderby = '', $order = '' ) {
-
+		/**
+		 *
+		 * $limit - int - limit number of rows returned
+		 **/
+		function get_chapters( $args, $search = false, $orderby = '', $order = '', $limit = 0 ) {
+			
 			$conditions = array();
 			foreach ( $args as $name => $value ) {
+				if( $name == 'orderby' || $name == 'order' ){
+					continue;
+				}
+				
 				$value = addslashes( $value );
 				$conditions[] = "$name = '$value'";
 			}
@@ -54,48 +64,83 @@
 			if ( $search ) {
 				$conditions[] = "chapter_name LIKE '%$search%' OR chapter_name_extend LIKE '%$search%'";
 			}
-
 			$conditions = apply_filters( 'manga_get_chapters_conditions', $conditions, $args );
 
 			$where = implode( ' AND ', $conditions );
+			
+			$results = $this->get( $this->table, $where, $orderby, $order, $limit ? "LIMIT 0, $limit" : '');
 
-			$results = $this->get( $this->table, $where, $orderby, $order );
-
-			return apply_filters( 'manga_get_chapters_results', $results, $args, $where, $orderby, $order );
-
+			$results = apply_filters( 'manga_get_chapters_results', $results, $args, $where, $orderby, $order, $limit );
+			
+			return $results;
 		}
 
-		function get_latest_chapters( $post_id, $q, $num, $all_meta = 0, $orderby = 'name', $order = 'desc' ) {
-
+		function get_latest_chapters( $post_id, $q, $num = 0, $all_meta = 0, $orderby = 'name', $order = 'desc' ) {
+			
 			$chapters = $this->get_chapters( array(
 				'post_id' => $post_id
-			), $q, $orderby, $order );
-
-			if ( $chapters && $all_meta == 0 ) {
+			), $q, $orderby, $order, $num );
+		
+			if ( $chapters && $all_meta == 0 && $num > 0) {
 				return array_slice( $chapters, 0, $num );
 			}
-
+			
 			return $chapters;
 
 		}
 
 		function delete_chapter( $args ) {
+			// delete chapter content if it is novel
+			$chapter_id = isset($args['chapter_id']) ? $args['chapter_id'] : 0;
+			
+			if($chapter_id){
+				$ar = array(
+						'post_parent' => $chapter_id,
+						'post_type'   => 'chapter_text_content'
+					);
+					
+				$the_query = new WP_Query( $ar );
+				if ($the_query->have_posts()) {
+					while ( $the_query->have_posts() ) :
+						$the_query->the_post();
+						wp_delete_post(get_the_ID());
+					endwhile;
+				}
+				wp_reset_postdata();
 
-			$resp = $this->delete( $this->table, $args );
+				$resp = $this->delete( $this->table, $args );
 
-			return $resp;
-
+				return $resp;
+			} elseif( isset( $args['post_id'] ) ){
+                // delete chapter content, if any (novel, video chapter)
+				$this->get_wpdb()->query(
+                    $this->get_wpdb()->prepare(
+                        "DELETE P FROM {$this->get_wpdb()->prefix}posts as P
+                        JOIN {$this->get_wpdb()->prefix}manga_chapters as C
+                        ON P.post_parent = C.chapter_id
+                        WHERE C.post_id = %d AND P.post_type = 'chapter_text_content'",
+                        $args['post_id']
+                    )
+                );
+				
+				return $this->delete( $this->table, $args );
+            }
+			
+			return false;
 		}
 
-		function update_chapter( $update, $args ) {
+		/**
+		 * $where_args - array('post_id', 'chapter_id')
+		 **/
+		function update_chapter( $update, $where_args ) {
 
-			if( ! isset( $update['chapter_slug'] ) && isset( $args['post_id'] ) && isset( $args['chapter_id'] ) ){
+			if( ! isset( $update['chapter_slug'] ) && isset( $where_args['post_id'] ) && isset( $where_args['chapter_id'] ) ){
 				// Get unique slug
 				global $wp_manga_functions;
-				$update['chapter_slug'] = $wp_manga_functions->unique_slug( $args['post_id'], $update['chapter_name'], $args['chapter_id'] );
+				$update['chapter_slug'] = $wp_manga_functions->unique_slug( $where_args['post_id'], $update['chapter_name'], $where_args['chapter_id'] );
 			}
 
-			return $this->update( $this->table, $update, $args );
+			return $this->update( $this->table, $update, $where_args );
 
 		}
 
@@ -150,13 +195,12 @@
 
 		function get_chapter_by_slug( $post_id, $chapter_slug ) {
 
-			$chapter = $this->get_chapters( array(
+			$chapters = $this->get_chapters( array(
 				'post_id'      => $post_id,
 				'chapter_slug' => $chapter_slug
 			) );
-
-			if ( isset( $chapter[0] ) ) {
-				return $chapter[0];
+			if ( isset( $chapters[0] ) ) {
+				return $chapters[0];
 			}
 
 			return false;
@@ -164,8 +208,9 @@
 		}
 
 		function get_chapter_id_by_slug( $post_id, $chapter_slug ) {
-
-			$chapter = $this->get_chapter_by_slug( $post_id, $chapter_slug );
+            global $wp_manga_functions;
+            
+			$chapter = $wp_manga_functions->get_chapter_by_slug( $post_id, $chapter_slug );
 
 			if ( $chapter ) {
 				return $chapter['chapter_id'];
@@ -197,11 +242,50 @@
 				if ( $chapter['volume'] == false ) {
 					unset( $chapter['volume'] );
 				}
-
+				
+				// populate Chapter Args into coresponding properties
+				// @since 1.6.1.5
+				$args = isset($chapter['chapter_metas']) ? unserialize($chapter['chapter_metas']) : array();
+				
+				foreach($args as $key => $value){
+					$chapter[$key] = $value;
+				}
 			}
 
 			return $chapter;
 
+		}
+		
+		/**
+		 * Get Chapter meta
+		 *
+		 * $chapter - String (ID) or Mixed Object (Chapter obj)
+		 * $meta - string - Name of meta
+		 *
+		 * @return $args (array) if $meta is empty, or mixed value if $meta name is passed in
+		 *
+		 * since 1.6.1.5
+		 **/
+		function get_chapter_meta( $chapter, $meta = ''){
+			if(is_numeric($chapter)){
+				$chapter = $this->get_chapter_by_id( null, $chapter );
+			}
+			
+			if ( $chapter ) {
+				$args = isset($chapter['chapter_metas']) ? $chapter['chapter_metas'] : '';
+				
+				if($args){
+					$args = unserialize($args);
+					
+					if($meta && isset($args[$meta])){
+						return $args[$meta];
+					}
+					
+					return $args;
+				}
+			}
+
+			return false;
 		}
 
 		function update_manga_latest_meta( $chapter_id, $args ){

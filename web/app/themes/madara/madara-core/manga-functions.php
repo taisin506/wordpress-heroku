@@ -42,11 +42,25 @@
 			global $wp_manga;
 
 			wp_enqueue_script( 'user_history', get_parent_theme_file_uri( '/js/history.js' ), array( 'jquery' ), '', true );
+			
+			$reading_chapter = function_exists('madara_permalink_reading_chapter') ? madara_permalink_reading_chapter() : false; 
+			
+			// support Madara Core before 1.6;
+			if(!$reading_chapter){
+				 // support Madara Core before 1.6
+				 if($chapter_slug = get_query_var('chapter')){
+					 global $wp_manga_functions;
+					$reading_chapter = $wp_manga_functions->get_chapter_by_slug( get_the_ID(), $chapter_slug );
+				 }
+			}
+			
+			$chapter_slug = $reading_chapter ? $reading_chapter['chapter_slug'] : false;
+			
 			wp_localize_script( 'user_history', 'user_history_params', array(
 				'ajax_url' => admin_url() . 'admin-ajax.php',
 				'postID'   => get_the_ID(),
-				'chapter'  => get_query_var( 'chapter' ),
-				'page'     => isset( $_GET[$wp_manga->manga_paged_var] ) ? $_GET[$wp_manga->manga_paged_var] : '',
+				'chapter'  => $chapter_slug ? $chapter_slug : '',
+				'page'     => get_query_var($wp_manga->manga_paged_var) ? get_query_var($wp_manga->manga_paged_var) : 1,
 				'interval' => intval( Madara::getOption( 'madara_reading_history_delay', '5' ) ) * 1000,
 				'nonce'    => wp_create_nonce( 'madara_reading_history' )
 			) );
@@ -137,19 +151,19 @@
 
 	}
 
-	function is_manga_single() {
+	function is_manga_single( $manga_id = 0) {
 
 		$wp_manga_functions = madara_get_global_wp_manga_functions();
 
-		return $wp_manga_functions->is_manga_single();
+		return $wp_manga_functions->is_manga_single( $manga_id );
 
 	}
 
-	function is_manga_reading_page() {
+	function is_manga_reading_page($chapter_slug = '', $manga_id = 0) {
 
 		$wp_manga_functions = madara_get_global_wp_manga_functions();
 
-		return $wp_manga_functions->is_manga_reading_page();
+		return $wp_manga_functions->is_manga_reading_page($chapter_slug, $manga_id);
 
 	}
 
@@ -171,16 +185,20 @@
 		$chapter_slug = '';
 
 		if ( $slug == '' ) {
-			$chapter_slug = get_query_var( 'chapter' );
+			$reading_chapter = function_exists('madara_permalink_reading_chapter') ? madara_permalink_reading_chapter() : false;
+			
+			if($reading_chapter) {
+				$chapter_id = $reading_chapter['chapter_id'];
+			}
+		} else {
+			$chapter = madara_get_global_wp_manga_chapter()->get_chapter_by_slug( get_the_ID(), $slug );
+			
+			if ( is_array( $chapter ) && ! empty( $chapter ) ) {
+				$chapter_id = $chapter['chapter_id'];
+			}
 		}
-
-		$chapter = madara_get_global_wp_manga_chapter()->get_chapter_by_slug( get_the_ID(), $chapter_slug );
-		if ( is_array( $chapter ) && ! empty( $chapter ) ) {
-			$chapter_id = $chapter['chapter_id'];
-		}
-
+		
 		return $chapter_id;
-
 	}
 
 	/*
@@ -190,19 +208,20 @@
 	function madara_get_chapter_name_by_chapter_slug( $slug = '' ) {
 
 		$chapter_name = '';
-		$chapter_slug = '';
 
 		if ( $slug == '' ) {
-			$chapter_slug = get_query_var( 'chapter' );
+			$reading_chapter = function_exists('madara_permalink_reading_chapter') ? madara_permalink_reading_chapter() : false;
+			if($reading_chapter){
+				$chapter_name = $reading_chapter['chapter_name'];
+			}
+		} else {
+			$chapter = madara_get_global_wp_manga_chapter()->get_chapter_by_slug( get_the_ID(), $slug );
+			if ( is_array( $chapter ) && ! empty( $chapter ) ) {
+				$chapter_name = $chapter['chapter_name'];
+			}
 		}
-
-		$chapter = madara_get_global_wp_manga_chapter()->get_chapter_by_slug( get_the_ID(), $chapter_slug );
-		if ( is_array( $chapter ) && ! empty( $chapter ) ) {
-			$chapter_name = $chapter['chapter_name'];
-		}
-
+		
 		return $chapter_name;
-
 	}
 
 	if ( ! function_exists( 'is_manga' ) ) {
@@ -218,54 +237,76 @@
 
 	function madara_update_user_settings() {
 
+		if( empty( $_POST['account-form-submit'] ) ){
+			return;
+		}
+
 		//update account Settings
 		$new_name    = isset( $_POST['user-new-name'] ) ? $_POST['user-new-name'] : '';
 		$new_email   = isset( $_POST['user-new-email'] ) ? $_POST['user-new-email'] : '';
 		$current_pwd = isset( $_POST['user-current-password'] ) ? $_POST['user-current-password'] : '';
-		$new_pwd     = isset( $_POST['user-new-passsword'] ) ? $_POST['user-new-password'] : '';
+		$new_pwd     = isset( $_POST['user-new-password'] ) ? $_POST['user-new-password'] : '';
 		$confirm_pwd = isset( $_POST['user-new-password-confirm'] ) ? $_POST['user-new-password-confirm'] : '';
 
 		$wp_nonce = isset( $_POST['_wpnonce'] ) ? $_POST['_wpnonce'] : '';
-		$user_id  = isset( $_POST['userID'] ) ? $_POST['userID'] : '';
+		$user_id  = get_current_user_id();
 
-		if ( empty( $user_id ) || empty( $wp_nonce ) || ! wp_verify_nonce( $wp_nonce, '_wp_manga_save_user_settings' ) ) {
-			return false;
+		if ( empty( $user_id ) || empty( $wp_nonce ) ) {
+			return new WP_Error( 'invalid_request', __( 'Invalid request, please try again', 'madara' ) );
 		}
 
-		//account Settings
-		$user = array(
-			'ID' => $user_id
-		);
+		if( ! wp_verify_nonce( $wp_nonce, '_wp_manga_save_user_settings' ) ){
+			return new WP_Error( 'invalid_request', __( 'Session expired, please try again.', 'madara' ) );
+		}
 
+		// Get user object from ID
+		$user = get_user_by( 'ID', $user_id );
+
+		if( ! $user ){
+			return new WP_Error( 'user_not_found', __( 'User not found, please try again later. ', 'madara' ) );
+		}
+
+		// Update account display name
 		if ( ! empty( $new_name ) ) {
+
 			update_user_meta( $user_id, 'nickname', $new_name );
-			$user['user_nicename'] = $new_name;
-			$user['display_name']  = $new_name;
+
+			$user->user_nicename = $new_name;
+			$user->display_name  = $new_name;
+
 		}
 
+		// Update account email
 		if ( ! empty( $new_email ) ) {
-			$user['user_email'] = $new_email;
+			$user->user_email = $new_email;
 		}
 
-		if ( ! empty( $current_pwd ) && ! empty( $new_pwd ) && ! empty( $confirm_pwd ) && ( $new_pwd !== $confirm_pwd ) ) {
+		// update password
+		if ( ! empty( $new_pwd ) ) {
 
-			$user_obj = get_user_by( 'ID', $user_id );
-
-			if ( ! is_wp_error( $user_obj ) && wp_check_password( $current_pwd, $user_obj->data->user_pass, $user_id ) ) {
-				wp_set_password( $new_pwd, $user_id );
+			if( empty( $current_pwd ) ){
+				return new WP_Error( 'empty_pwd', __( 'Current Password cannot be empty', 'madara' ) );
+			}elseif( empty( $confirm_pwd ) ){
+				return new WP_Error( 'empty_pwd', __( 'Confirm Password cannot be empty', 'madara' ) );
+			}elseif( $new_pwd === $current_pwd ){
+				return new WP_Error( 'same_pwd', __( 'New password must be different with current password', 'madara' ) );
+			}elseif( $new_pwd !== $confirm_pwd ){
+				return new WP_Error( 'dismatch_pwd', __( 'New Password & Confirm Password must be matched.', 'madara' ) );
+			}elseif( ! wp_check_password( $current_pwd, $user->data->user_pass, $user_id ) ){
+				return new WP_Error( 'invalid_pwd', __( 'Incorrect current password, please check again.', 'madara' ) );
+			}else{
+				$user->user_pass = $new_pwd;
 			}
 
 		}
 
-		if ( count( $user ) > 1 ) {
-			$resp = wp_update_user( $user );
+		$resp = wp_update_user( $user );
 
-			if ( ! is_wp_error( $resp ) ) {
-				return true;
-			}
+		if ( is_wp_error( $resp ) ) {
+			return $resp;
 		}
 
-		return false;
+		return true;
 
 	}
 
@@ -355,12 +396,23 @@
 	add_action( 'wp_ajax_manga-remove-history', 'madara_remove_history' );
 	add_action( 'wp_ajax_nopriv_manga-remove-history', 'madara_remove_history' );
 
-	function madara_get_reading_style( $reading_style = null ) {
+	function madara_get_reading_style( $user_reading_style = null, $manga_id = 0 ) {
 
 		if ( is_user_logged_in() ) {
 
-			$user_reading_style = get_user_meta( get_current_user_id(), '_manga_reading_style', true );
 			if ( ! empty( $user_reading_style ) ) {
+				if($user_reading_style == 'default'){
+					if($manga_id){
+						$user_reading_style = get_post_meta($manga_id, 'manga_reading_style', 'default');
+						
+						if($user_reading_style != 'default'){
+							return $user_reading_style;
+						}
+					}
+					
+					$user_reading_style = Madara::getOption( 'manga_reading_style', 'paged' );
+				}
+				
 				return $user_reading_style;
 			}
 
@@ -369,10 +421,17 @@
 		$reading_style = Madara::getOption( 'manga_reading_style', 'paged' );
 
 		return $reading_style;
-
 	}
-
-	add_filter( 'get_reading_style', 'madara_get_reading_style' );
+	
+	add_filter( 'get_reading_style', 'madara_get_reading_style', 10, 2 );
+	
+	function madara_default_notification_chapter_reading_style($default){
+		$default = Madara::getOption( 'manga_reading_style', $default );
+		
+		return $default;
+	}
+	
+	add_filter('wp_manga_default_notification_chapter_reading_style', 'madara_default_notification_chapter_reading_style');
 
 	function madara_get_img_per_page() {
 
@@ -448,9 +507,7 @@
 			$authors            = $wp_manga_functions->get_manga_authors( $post_id );
 			$artists            = $wp_manga_functions->get_manga_artists( $post_id );
 			$genres             = $wp_manga_functions->get_manga_genres( $post_id );
-			$rank               = $wp_manga_functions->get_manga_rank( $post_id );
-			$views              = $wp_manga_functions->get_manga_monthly_views( 2544 );
-
+			
 			ob_start();
 
 			?>
@@ -491,7 +548,7 @@
                                     </h5>
                                 </div>
                                 <div class="summary-content">
-									<?php echo sprintf( _n( ' %1s, it has %2s monthly view', ' %1s, it has %2s monthly views', $views, 'madara' ), $rank, $views ); ?>
+									<?php $wp_manga_functions->print_ranking_views( $post_id ); ?>
                                 </div>
                             </div>
 							<?php if ( $alternative ): ?>
@@ -573,7 +630,7 @@
 
 			ob_end_clean();
 
-			echo $html;
+			echo madara_filter_content($html);
 
 		}
 
@@ -606,7 +663,7 @@
 
 	function madara_page_reading_ajax() {
 
-		$reading_style = madara_get_reading_style();
+		$reading_style = isset( $_GET['style'] ) ? $_GET['style'] : madara_get_reading_style();
 
 		if ( $reading_style == 'paged' ) {
 			$ajax = Madara::getOption( 'manga_page_reading_ajax', 'on' );
@@ -623,14 +680,13 @@
 	add_filter( 'pre_get_document_title', 'change_title_for_manga_single' );
 	function change_title_for_manga_single( $title ) {
 		global $post, $wp_manga_chapter, $wp_manga_setting;
-		if ( is_single() && isset( $post->post_type ) && $post->post_type == 'wp-manga' && get_query_var( 'chapter' ) != '' ) {
+		$reading_chapter = function_exists('madara_permalink_reading_chapter') ? madara_permalink_reading_chapter() : false;
+		if ( is_single() && isset( $post->post_type ) && $post->post_type == 'wp-manga' && $reading_chapter ) {
 
 			$single_manga_seo = $wp_manga_setting->get_manga_option( 'single_manga_seo', 'manga' );
 			$site_name        = get_bloginfo( 'name' );
 
-			$chapter_slug = get_query_var( 'chapter' );
-			$chapter      = $wp_manga_chapter->get_chapter_by_slug( $post->ID, $chapter_slug );
-			$chapter_name = $chapter['chapter_name'];
+			$chapter_name = $reading_chapter['chapter_name'];
 
 			$title = $post->post_title . ' - ' . $chapter_name;
 			if ( $single_manga_seo == 1 ) {
@@ -642,22 +698,6 @@
 
 		return $title;
 	}
-
-	function madara_reading_page_classes( $classes ) {
-
-		if ( is_manga_reading_page() && Madara::getOption( 'manga_reading_dark_mode', 'off' ) == 'on' ) {
-			if ( ( $key = array_search( 'text-ui-dark', $classes ) ) !== false ) {
-				unset( $classes[ $key ] );
-			}
-			if ( ! isset( $classes['text-ui-light'] ) ) {
-				$classes[] = 'text-ui-light';
-			}
-		}
-
-		return $classes;
-	}
-
-	add_filter( 'body_class', 'madara_reading_page_classes', 11 );
 
 	function hide_meta_content_user_page() {
 
@@ -719,11 +759,13 @@
 
 			$number = intval( Madara::getOption( 'madara_reading_history_items', 12 ) );
 
-			//if there are more than the maximum of numbers manga in history
-			if ( count( $current_history ) > $number ) {
-				// order then cut the history array
-				$current_history = madara_history_order( $current_history );
-				$current_history = array_slice( $current_history, 0, $number );
+			if($number != -1){
+				//if there are more than the maximum of numbers manga in history
+				if ( count( $current_history ) > $number ) {
+					// order then cut the history array
+					$current_history = madara_history_order( $current_history );
+					$current_history = array_slice( $current_history, 0, $number );
+				}
 			}
 
 			//check if current chapter is existed
@@ -737,6 +779,30 @@
 
 		return update_user_meta( $user_id, '_wp_manga_history', $current_history );
 
+	}
+	
+	// return chapter ID of current reading manga
+	function madara_get_current_reading_chapter($user_id, $manga_id){
+		$history_manga = get_user_meta( $user_id, '_wp_manga_history', true );
+
+		if ( empty( $history_manga ) || ! is_array( $history_manga ) ) {
+			return false;
+		}
+
+		$chapter_id = 0;
+
+		// make sure that retrieve manga is still exists
+		foreach( $history_manga as $index => $manga ){
+
+			$unset = false;
+
+			if ( isset( $manga['id'] ) && $manga['id'] == $manga_id ) {
+				$chapter_id = $manga;
+				break;
+			}
+		}
+
+		return $chapter_id;
 	}
 
 	function madara_get_user_history_manga( $user_id = null ) {
@@ -838,9 +904,9 @@
 				$seo = $wp_manga_setting->get_manga_option('single_manga_seo', 'manga');
 
 				$c_slug        = get_query_var('chapter');
-				$c             = $wp_manga_chapter->get_chapter_by_slug( $post->ID, $c_slug );
-				$c_name        = $c['chapter_name'];
-				$c_name_extend = $c['chapter_name_extend'];
+				$chapter       = $wp_manga_functions->get_chapter_by_slug( $post->ID, $c_slug );
+				$c_name        = $chapter['chapter_name'];
+				$c_name_extend = $chapter['chapter_name_extend'];
 
 				$chapter_full_name = "{$c_name}" . ( !empty( $c_name_extend ) ? " - {$c_name_extend}" : "" );
 
@@ -850,7 +916,7 @@
 
 				if($chapter_type == 'text') {
 					$chapter_content = new WP_Query( array(
-						'post_parent' => $c['chapter_id'],
+						'post_parent' => $chapter['chapter_id'],
 						'post_type'   => 'chapter_text_content'
 					) );
 
@@ -865,11 +931,13 @@
 				}
 
 				$chapter_title = Madara::getOption( 'seo_chapter_title', null );
-				$chapter_desc  = Madara::getOption( 'seo_chapter_desc', null );
+				$chapter_desc  = (isset( $chapter['chapter_seo'] ) && trim($chapter['chapter_seo']) != '') ? $chapter['chapter_seo'] : Madara::getOption( 'seo_chapter_desc', null );
+                $chapter_index = $chapter['chapter_index'];
 
 				if( !empty( $chapter_title ) ){
 					$chapter_title = str_replace( '%chapter%', $chapter_full_name, $chapter_title );
 					$chapter_title = str_replace( '%title%', $origin_title, $chapter_title );
+                    $chapter_title = str_replace( '%chapter_index%', $chapter_index, $chapter_title);
 
 					$manga_title = $chapter_title;
 				}elseif( $madara_echo_tags && $origin_title ){
@@ -881,7 +949,7 @@
 				if( !empty( $chapter_desc ) ){
 					$chapter_desc = str_replace( '%chapter%', $chapter_full_name, $chapter_desc );
 					$chapter_desc = str_replace( '%title%', $origin_title, $chapter_desc );
-
+                    $chapter_desc = str_replace( '%chapter_index%', $chapter_index, $chapter_desc);
 					$chapter_desc = str_replace ( '%summary%', $chapter_summary, $chapter_desc);
 
 					$description = $chapter_desc;
@@ -1002,9 +1070,81 @@
 		$chapter_date       = strtotime( $chapter_date );
 
 		if ( ( $chapter_date + $time_range ) >= $current_time ) {
-			$date = apply_filters( 'madara_new_chapter_tag', '<span class="c-new-tag"><a href="' . esc_url( $chapter_link ) . '" title="' . esc_attr( $time_diff ) . '"><img src="' . esc_url( get_parent_theme_file_uri() ) . '/images/new.gif' . '" alt="' . esc_attr( $time_diff ) . '"></a></span>' );
+			$date = apply_filters( 'madara_new_chapter_tag', '<span class="c-new-tag"><a href="' . esc_url( $chapter_link ) . '" title="' . esc_attr( $time_diff ) . '"><img src="' . esc_url( get_parent_theme_file_uri() ) . '/images/new.gif' . '" alt="' . esc_attr( $time_diff ) . '"></a></span>', $date, $chapter_id, $chapter_date, $chapter_link, $time_diff );
 		}
 
 		return $date;
 
+	}
+	
+	add_action('init', 'madara_init_hooks');
+	function madara_init_hooks(){
+		if(Madara::getOption('manga_detail_lazy_chapters', 'on') == 'off'){
+			remove_action('wp-manga-chapter-listing', 'wp_manga_single_manga_info_chapters');
+			add_action('wp-manga-chapter-listing', 'madara_single_manga_info_chapters');
+			
+			remove_action('wp-manga-reading-chapters-selectbox', 'wp_manga_reading_chapters_selectbox', 10, 3);
+			add_action('wp-manga-reading-chapters-selectbox', 'madara_reading_chapters_selectbox', 10, 3);
+		}
+	}
+	
+	// load Chapters List of a Manga, and echo
+	function madara_single_manga_info_chapters( $manga_id ){
+		global $wp_manga_functions, $wp_manga_database;
+		
+		$sort_option = $wp_manga_database->get_sort_setting();
+		
+		$manga = $wp_manga_functions->get_all_chapters( $manga_id, $sort_option['sort'] );
+		
+		$current_read_chapter = 0;
+		if ( is_user_logged_in() ) {
+			$user_id = get_current_user_id();
+			$history = madara_get_current_reading_chapter($user_id, $manga_id);
+			if($history){
+				$current_read_chapter = $history['c'];
+			}
+		}
+		
+		global $wp_manga_template;
+		include $wp_manga_template->load_template('single/info','chapters', false);
+	}
+	
+	function madara_reading_chapters_selectbox($cur_chap, $all_chaps, $manga_type){
+		if( !empty( $_GET['style'] ) ){
+			$style = $_GET['style'];
+		} else {
+			global $wp_manga_functions;
+			$style = $wp_manga_functions->get_reading_style();
+		}
+		
+		if($manga_type == 'manga'){
+			?>
+			<div class="chapters_selectbox_holder" data-manga="<?php echo esc_attr($cur_chap['post_id']);?>" data-chapter="<?php echo esc_attr($cur_chap['chapter_slug']);?>" data-vol="<?php echo esc_attr($cur_chap['volume_id']);?>" data-type="manga" data-style="<?php echo esc_attr($style);?>">
+				<!-- place holder -->
+				<?php
+				global $wp_manga_chapter_type;
+				$wp_manga_chapter_type->reading_chapters_nav($cur_chap['post_id'], $all_chaps, $cur_chap['volume_id'], $cur_chap['chapter_slug'], $style);
+				?>
+			</div>
+			<?php
+		} else { ?>
+			<div class="c-selectpicker selectpicker_chapter chapters_selectbox_holder" data-manga="<?php echo esc_attr($cur_chap['post_id']);?>" data-chapter="<?php echo esc_attr($cur_chap['chapter_slug']);?>" data-vol="<?php echo esc_attr($cur_chap['volume_id']);?>" data-type="content">
+				<?php
+				global $wp_manga_text_type;
+				$wp_manga_text_type->reading_chapters_nav($cur_chap['post_id'], $all_chaps, $cur_chap['volume_id'], $cur_chap['chapter_slug']);
+				?>
+			</div>
+		<?php 
+		}
+	}
+	
+	add_action('wp_manga_before_manga_discussion', 'madara_before_manga_discussion');
+	function madara_before_manga_discussion(){
+		$reading_chapter = function_exists('madara_permalink_reading_chapter') ? madara_permalink_reading_chapter() : false;
+		$chapter_comments_heading = Madara::getOption('manga_reading_discussion_heading', 'on');
+		if($reading_chapter && $chapter_comments_heading == 'on'){
+		?>
+		<h4><?php echo sprintf(esc_html__('Comments for chapter "%s"', 'madara'), $reading_chapter['chapter_name']);?></h4>
+		<?php
+		}
 	}

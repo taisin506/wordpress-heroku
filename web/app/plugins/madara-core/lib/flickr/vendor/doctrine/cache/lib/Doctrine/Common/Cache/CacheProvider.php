@@ -82,7 +82,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
     /**
      * {@inheritdoc}
      */
-    public function fetchMultiple(array $keys)
+    public function fetchMultiple($keys)
     {
         if (empty($keys)) {
             return [];
@@ -107,7 +107,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
     /**
      * {@inheritdoc}
      */
-    public function saveMultiple(array $keysAndValues, $lifetime = 0)
+    public function saveMultiple($keysAndValues, $lifetime = 0)
     {
         $namespacedKeysAndValues = [];
         foreach ($keysAndValues as $key => $value) {
@@ -136,7 +136,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
     /**
      * {@inheritdoc}
      */
-    public function deleteMultiple(array $keys)
+    public function deleteMultiple($keys)
     {
         return $this->doDeleteMultiple(array_map(array($this, 'getNamespacedId'), $keys));
     }
@@ -189,7 +189,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
      *
      * @return string The namespaced id.
      */
-    private function getNamespacedId(string $id) : string
+    private function getNamespacedId($id)
     {
         $namespaceVersion  = $this->getNamespaceVersion();
 
@@ -201,7 +201,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
      *
      * @return string
      */
-    private function getNamespaceCacheKey() : string
+    private function getNamespaceCacheKey()
     {
         return sprintf(self::DOCTRINE_NAMESPACE_CACHEKEY, $this->namespace);
     }
@@ -211,7 +211,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
      *
      * @return integer
      */
-    private function getNamespaceVersion() : int
+    private function getNamespaceVersion()
     {
         if (null !== $this->namespaceVersion) {
             return $this->namespaceVersion;
@@ -229,7 +229,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
      * @param array $keys Array of keys to retrieve from cache
      * @return array Array of values retrieved for the given keys.
      */
-    protected function doFetchMultiple(array $keys)
+    protected function doFetchMultiple($keys)
     {
         $returnValues = [];
 
@@ -269,7 +269,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
      *
      * @return bool TRUE if the operation was successful, FALSE if it wasn't.
      */
-    protected function doSaveMultiple(array $keysAndValues, $lifetime = 0)
+    protected function doSaveMultiple($keysAndValues, $lifetime = 0)
     {
         $success = true;
 
@@ -301,7 +301,7 @@ abstract class CacheProvider implements Cache, FlushableCache, ClearableCache, M
      *
      * @return bool TRUE if the operation was successful, FALSE if it wasn't
      */
-    protected function doDeleteMultiple(array $keys)
+    protected function doDeleteMultiple($keys)
     {
         $success = true;
 

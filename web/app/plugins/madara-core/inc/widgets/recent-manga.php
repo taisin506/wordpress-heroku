@@ -23,6 +23,7 @@
 
 			ob_start();
 			extract( $args );
+			
 			$title          = ! empty( $instance['title'] ) ? $instance['title'] : '';
 			$number_of_post = ! empty( $instance['number_of_post'] ) ? $instance['number_of_post'] : '3';
 			$order_by       = ! empty( $instance['order_by'] ) ? $instance['order_by'] : '';
@@ -31,6 +32,7 @@
 			$style          = ! empty( $instance['style'] ) ? $instance['style'] : '';
 			$button         = ! empty( $instance['button'] ) ? $instance['button'] : '';
 			$url            = ! empty( $instance['url'] ) ? $instance['url'] : '';
+			$show_volume    = ! empty( $instance['show_volume'] ) ? $instance['show_volume'] : 'yes';
 
 			$query_args = array(
 				'posts_per_page' => $number_of_post,
@@ -95,13 +97,13 @@
 			if ( $time_range == 'all' ) {
 				$time_range = '';
 			} elseif ( $time_range == 'day' ) {
-				$time_range = '_wp_manga_day_views';
+				$time_range = '_wp_manga_day_views_value';
 			} elseif ( $time_range == 'week' ) {
-				$time_range = '_wp_manga_week_views';
+				$time_range = '_wp_manga_week_views_value';
 			} elseif ( $time_range == 'month' ) {
-				$time_range = '_wp_manga_month_views';
+				$time_range = '_wp_manga_month_views_value';
 			} else {
-				$time_range = '_wp_manga_year_views';
+				$time_range = '_wp_manga_year_views_value';
 			}
 
 			switch ( $order_by ) {
@@ -127,6 +129,8 @@
 				case 'new-manga' :
 					$query_args['orderby'] = 'date';
 					break;
+				case 'random' :
+					$query_args['orderby'] = 'rand';
 			}
 
 			$queried_posts = new WP_Query( $query_args );
@@ -146,7 +150,6 @@
 					while ( $queried_posts->have_posts() ) {
 
 						$queried_posts->the_post();
-
 						?>
                         <div class="popular-item-wrap">
 
@@ -173,6 +176,12 @@
 			<?php
 
 			echo $after_widget;
+			if($show_volume == 'no'){
+				echo '<style type="text/css">';
+				echo '#' . $this->id . ' .vol.font-meta{display:none}';
+				echo '#' . $this->id . '.widget.c-popular .popular-item-wrap .popular-content .chapter-item .vol + .post-on{display: inline}';
+				echo '</style>';
+			}
 		}
 
 		function update( $new_instance, $old_instance ) {
@@ -190,6 +199,7 @@
 			$instance['style']          = strip_tags( $new_instance['style'] );
 			$instance['button']         = strip_tags( $new_instance['button'] );
 			$instance['url']            = strip_tags( $new_instance['url'] );
+			$instance['show_volume']            = strip_tags( $new_instance['show_volume'] );
 
 			return $instance;
 		}
@@ -210,7 +220,8 @@
 				'rating'   => esc_html__( 'Ratings', WP_MANGA_TEXTDOMAIN ),
 				'trending'  => esc_html__( 'Trending', WP_MANGA_TEXTDOMAIN ),
 				'views'     => esc_html__( 'Views', WP_MANGA_TEXTDOMAIN ),
-				'new-manga' => esc_html__( 'New Manga', WP_MANGA_TEXTDOMAIN )
+				'new-manga' => esc_html__( 'New Manga', WP_MANGA_TEXTDOMAIN ),
+				'random' => esc_html__( 'Random', WP_MANGA_TEXTDOMAIN )
 			);
 
 			$time_range = ! empty( $instance['time_range'] ) ? $instance['time_range'] : 'all';
@@ -222,7 +233,7 @@
 			);
 
 			$style = ! empty( $instance['style'] ) ? $instance['style'] : 'style-1';
-
+			$show_volume = ! empty( $instance['show_volume'] ) ? $instance['show_volume'] : 'yes';
 			$button = ! empty( $instance['button'] ) ? $instance['button'] : '';
 			$url    = ! empty( $instance['url'] ) ? $instance['url'] : '';
 
@@ -313,6 +324,16 @@
                     <option value="style-1" <?php echo $style == 'style-1' ? 'selected' : '' ?>><?php echo esc_html__( 'Style 1', WP_MANGA_TEXTDOMAIN ); ?></option>
                     <option value="style-2" <?php echo $style == 'style-2' ? 'selected' : '' ?>><?php echo esc_html__( 'Style 2', WP_MANGA_TEXTDOMAIN ); ?></option>
                 </select>
+            </p>
+			
+			<p>
+                <label for="<?php echo $this->get_field_id( 'show_volume' ); ?>"><?php echo esc_html__( 'Show Volume', WP_MANGA_TEXTDOMAIN ); ?>
+                    : </label>
+                <select class="widefat" id="<?php echo $this->get_field_id( 'show_volume' ); ?>" name="<?php echo $this->get_field_name( 'show_volume' ); ?>">
+                    <option value="yes" <?php echo $show_volume == 'yes' ? 'selected' : '' ?>><?php echo esc_html__( 'Yes', WP_MANGA_TEXTDOMAIN ); ?></option>
+                    <option value="no" <?php echo $show_volume == 'no' ? 'selected' : '' ?>><?php echo esc_html__( 'No', WP_MANGA_TEXTDOMAIN ); ?></option>
+                </select>
+                <span class="description"><?php esc_html_e( 'Show Volume of chapter', WP_MANGA_TEXTDOMAIN ); ?></span>
             </p>
 
             <p>

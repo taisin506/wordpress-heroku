@@ -28,6 +28,7 @@
 			$manga_type = isset( $atts['manga_type'] ) && $atts['manga_type'] != '' ? $atts['manga_type'] : '';
 			$number    = isset( $atts['number'] ) && $atts['number'] != '' ? $atts['number'] : '2';
 			$time      = isset( $atts['time'] ) && $atts['time'] != '' ? $atts['time'] : 'all';
+			$autoplay      = isset( $atts['autoplay'] ) && $atts['autoplay'] != '' ? $atts['autoplay'] : false;
 
 			$thumb_size = array( 642, 320 );
 
@@ -95,7 +96,7 @@
 				?>
 
 
-                <div id="<?php echo esc_attr( $id ); ?>" class="<?php echo esc_attr( $wrap_class ) . ' ' . esc_attr( $classes ); ?>" data-style="<?php echo esc_attr( $data_style ); ?>" data-count="<?php echo esc_attr( $number ); ?>">
+                <div id="<?php echo esc_attr( $id ); ?>" class="<?php echo esc_attr( $wrap_class ) . ' ' . esc_attr( $classes ); ?>" data-style="<?php echo esc_attr( $data_style ); ?>" data-count="<?php echo esc_attr( $number ); ?>" <?php if($autoplay && $autoplay == '1'){?>data-autoplay="1"<?php }?>>
 
                     <div class="<?php echo esc_attr( $inner_class ); ?>" role="toolbar">
 
@@ -304,3 +305,18 @@
 			) );
 		}
 	}
+	
+	function wp_manga_gutenberg_manga_sliders_block() {
+		wp_register_script(
+			'wp_manga_gutenberg_manga_sliders_block',
+			plugins_url( 'gutenberg/manga-sliders.js', __FILE__ ),
+			array( 'wp-blocks', 'wp-element' )
+		);
+
+		if(function_exists('register_block_type')){
+		register_block_type( 'wp-manga/gutenberg-manga-sliders-block', array(
+			'editor_script' => 'wp_manga_gutenberg_manga_sliders_block',
+		) );
+		}
+	}
+	add_action( 'init', 'wp_manga_gutenberg_manga_sliders_block' );

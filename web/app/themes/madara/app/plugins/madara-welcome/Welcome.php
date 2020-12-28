@@ -121,7 +121,7 @@
                             <div class="madara-welcome-inner">
                                 <a class="madara-welcome-item" href="?page=<?php echo self::$page_slug; ?>&tab=document">
                                     <i class="fa fa-book"></i>
-                                    <h3><?php echo esc_html__( 'Full Document', 'madara' ); ?></h3>
+                                    <h3><?php echo esc_html__( 'Full Documents', 'madara' ); ?></h3>
                                     <p><?php echo esc_html__( 'See the full user guide for this theme\'s functions', 'madara' ); ?></p>
                                 </a>
                                 <a class="madara-welcome-item" href="?page=<?php echo self::$page_slug; ?>&tab=sample">

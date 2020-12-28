@@ -58,10 +58,12 @@
                 <?php } ?>
 
                 <?php if ( $wp_manga_functions->is_manga_reading_page() ) {
-                    $chapter_slug = get_query_var('chapter');
+                    $this_chapter = madara_permalink_reading_chapter();
 
-                    if ( ! empty( $chapter_slug ) ) {
-                        $chapter_db = $wp_manga_chapter->get_chapter_by_slug( get_the_ID(), $chapter_slug );
+					if ( $this_chapter ) {
+						$chapter_slug = $this_chapter['chapter_slug'];
+						
+                        $chapter_db = $this_chapter;
 
                         $c_name   = isset( $chapter_db['chapter_name'] ) ? $chapter_db['chapter_name'] : '';
                         $c_extend = $wp_manga_functions->filter_extend_name( $chapter_db['chapter_name_extend'] );

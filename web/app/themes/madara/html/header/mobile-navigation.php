@@ -3,7 +3,9 @@
 	 * Mobile Navigation Template
 	 * @package madara
 	 */
-
+    use App\Madara;
+    $header_login_buttons = Madara::getOption('header_disable_login_buttons', 'on');
+    $user_enabled = ($header_login_buttons == 'on') && ! is_user_logged_in() && get_option( 'users_can_register' );
 ?>
 
 <div class="mobile-menu menu-collapse off-canvas">
@@ -25,12 +27,12 @@
             <span class="c-user_name"><?php echo esc_html( $current_user->display_name ); ?></span>
         </div>
 
-	<?php } else { ?>
+	<?php } elseif( $user_enabled ) { ?>
 
         <div class="c-modal_item">
             <!-- Button trigger modal -->
             <span class="c-modal_sign-in">
-                <a href="javascript:void(0)" data-toggle="modal" data-target="#form-login" class="btn-active-modal"><?php echo esc_html__( 'Sign in', 'madara' ); ?></a>
+                <a href="#" data-toggle="modal" data-target="#form-login" class="btn-active-modal"><?php echo esc_html__( 'Sign in', 'madara' ); ?></a>
             </span>
 
             <span class="c-modal_sign-up">

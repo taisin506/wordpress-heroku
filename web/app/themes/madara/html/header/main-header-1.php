@@ -22,14 +22,13 @@
             <div class="search-navigation__wrap">
                 <ul class="main-menu-search nav-menu">
                     <li class="menu-search">
-                        <a href="javascript:;" class="open-search-main-menu"> <i class="ion-ios-search-strong"></i>
-                            <i class="ion-android-close"></i> </a>
+                        <a href="javascript:;" class="open-search-main-menu"> <i class="icon ion-ios-search"></i>
+                            <i class="icon ion-android-close"></i> </a>
 
                     </li>
                 </ul>
             </div>
 		<?php } ?>
-
     </div>
     <div class="c-togle__menu">
         <button type="button" class="menu_icon__open">

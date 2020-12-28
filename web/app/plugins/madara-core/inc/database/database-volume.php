@@ -10,6 +10,9 @@ class WP_DB_VOLUME extends WP_MANGA_DATABASE{
 
     }
 
+	/**
+	 * @return Volume Id
+	 **/
     function insert_volume( $args ){
 
         //post_id require, volume_name, date, date_gmt
@@ -35,7 +38,7 @@ class WP_DB_VOLUME extends WP_MANGA_DATABASE{
 
         foreach( $args as $name => $value ){
 
-            if( $name == 'orderby' ){
+            if( $name == 'orderby' || $name == 'order' ){
                 continue;
             }
 
@@ -44,13 +47,12 @@ class WP_DB_VOLUME extends WP_MANGA_DATABASE{
 
         $where = implode( ' AND ', $conditions );
 
-        $orderby = isset( $args['orderby'] ) ? $args['orderby'] : 'name';
+        $orderby = isset( $args['orderby'] ) ? $args['orderby'] : 'volume_index';
         $order   = isset( $args['order'] ) ? $args['order'] : '';
-
+		
         return $this->get( $this->table, $where, $orderby, $order );
 
     }
-
 
     function delete_volume( $args ){
 
@@ -89,6 +91,9 @@ class WP_DB_VOLUME extends WP_MANGA_DATABASE{
         );
     }
 
+	/**
+	 * $volume_id = 0 - get all chapters without volume
+	 **/
     function get_volume_chapters( $post_id, $volume_id, $orderby = '', $order = '' ){
 
         global $wp_manga_chapter;

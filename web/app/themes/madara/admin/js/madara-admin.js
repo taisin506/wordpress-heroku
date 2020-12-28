@@ -221,16 +221,24 @@ jQuery(document).ready(function (e) {
 		return false;
 	});
 
-	var page_tpl_obj = jQuery('select[name=page_template]');
-	var page_tpl = jQuery('select[name=page_template]').val();
-	var front_page_meta_boxes = jQuery('#frontpage_meta_box');
-
 	setTimeout(function () {
+		// for WP 4.9+
+		var page_tpl_obj = jQuery('select[name=page_template]');
+		var page_tpl = jQuery('select[name=page_template]').val();
+		if(page_tpl_obj.length == 0){
+			// for WP 5.+
+			page_tpl_obj = jQuery('.editor-page-attributes__template select#inspector-select-control-0');
+			page_tpl = jQuery('.editor-page-attributes__template select#inspector-select-control-0').val(); 
+		}
+		
+		var front_page_meta_boxes = jQuery('#frontpage_meta_box');
+		
 		var fullpage_meta_boxes = jQuery('#setting_fullpage_settings.tab-content');
 		var fullpage_meta_tab = jQuery('.ot-metabox-nav li[aria-controls="setting_fullpage_settings"]');
 
 		if (page_tpl == 'page-templates/front-page.php' || page_tpl == 'page-templates/fullpage.php') {
 			// do nothing
+			front_page_meta_boxes.removeClass('hide-if-js'); // for WP 4.9+
 		} else {
 			front_page_meta_boxes.addClass('hidden');
 		}
@@ -241,41 +249,39 @@ jQuery(document).ready(function (e) {
 			fullpage_meta_boxes.addClass('hidden');
 			fullpage_meta_tab.addClass('hidden');
 		}
+		
+		page_tpl_obj.change(function (event) {
+			var front_page_meta_boxes = jQuery('#frontpage_meta_box');
+
+			if (jQuery(this).val() == 'page-templates/front-page.php' || jQuery(this).val() == 'page-templates/fullpage.php') {
+				front_page_meta_boxes.removeClass('hidden');
+			} else {
+				front_page_meta_boxes.addClass('hidden');
+			}
+
+			var fullpage_meta_boxes = jQuery('#setting_fullpage_settings.tab-content');
+			var fullpage_meta_tab = jQuery('.ot-metabox-nav li[aria-controls="setting_fullpage_settings"]');
+
+			var page_content_box = jQuery('#setting_page_content_tab.tab-content');
+			var page_content_tab = jQuery('.ot-metabox-nav li[aria-controls="setting_page_content_tab"]');
+
+			if (jQuery(this).val() == 'page-templates/fullpage.php') {
+				fullpage_meta_boxes.removeClass('hidden');
+				fullpage_meta_tab.removeClass('hidden');
+
+				page_content_box.addClass('hidden');
+				page_content_tab.addClass('hidden');
+			} else {
+				fullpage_meta_boxes.addClass('hidden');
+				fullpage_meta_tab.addClass('hidden');
+
+				page_content_box.removeClass('hidden');
+				page_content_tab.removeClass('hidden');
+			}
+
+		});
 
 	}, 1000);
-
-
-	page_tpl_obj.change(function (event) {
-		var front_page_meta_boxes = jQuery('#frontpage_meta_box');
-
-		if (jQuery(this).val() == 'page-templates/front-page.php' || jQuery(this).val() == 'page-templates/fullpage.php') {
-			front_page_meta_boxes.removeClass('hidden');
-		} else {
-			front_page_meta_boxes.addClass('hidden');
-		}
-
-		var fullpage_meta_boxes = jQuery('#setting_fullpage_settings.tab-content');
-		var fullpage_meta_tab = jQuery('.ot-metabox-nav li[aria-controls="setting_fullpage_settings"]');
-
-		var page_content_box = jQuery('#setting_page_content_tab.tab-content');
-		var page_content_tab = jQuery('.ot-metabox-nav li[aria-controls="setting_page_content_tab"]');
-
-		if (jQuery(this).val() == 'page-templates/fullpage.php') {
-			fullpage_meta_boxes.removeClass('hidden');
-			fullpage_meta_tab.removeClass('hidden');
-
-			page_content_box.addClass('hidden');
-			page_content_tab.addClass('hidden');
-		} else {
-			fullpage_meta_boxes.addClass('hidden');
-			fullpage_meta_tab.addClass('hidden');
-
-			page_content_box.removeClass('hidden');
-			page_content_tab.removeClass('hidden');
-		}
-
-	});
-
 
 	/* custom usermetadata */
 	var usermeta_count = jQuery('.madara-account .metadata').length - 1;
@@ -293,7 +299,7 @@ jQuery(document).ready(function (e) {
 		');
 		return false;
 	});
-	jQuery(".custom-acc-remove").live('click', function () {
+	jQuery(".custom-acc-remove").on('click', function () {
 		jQuery(this).parent().parent().remove();
 	});
 

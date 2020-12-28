@@ -18,12 +18,19 @@
                 </div>
                 <div class="modal-body">
                     <div id="login" class="login">
-                        <h1>
+                        <h3>
                             <a href="<?php echo esc_url( home_url( '/' ) ); ?>" title="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" tabindex="-1"><?php echo esc_html__( 'Sign in', WP_MANGA_TEXTDOMAIN ); ?></a>
-                        </h1>
+                        </h3>
                         <p class="message login"></p>
 						<?php do_action( 'login_head' ); ?>
 						<?php do_action( 'login_enqueue_scripts' ); ?>
+						<?php
+						if(!wp_script_is('login_nocaptcha_google_api') && class_exists('LoginNocaptcha')){
+							?>
+							<script type="text/javascript" src="https://www.google.com/recaptcha/api.js?hl=en_GB&amp;ver=5.0.4"></script>
+							<?php
+						}
+						?>
                         <form name="loginform" id="loginform" method="post">
                             <p>
                                 <label><?php echo esc_html__( 'Username or Email Address *', WP_MANGA_TEXTDOMAIN ); ?>
@@ -32,7 +39,7 @@
                             </p>
                             <p>
                                 <label><?php echo esc_html__( 'Password *', WP_MANGA_TEXTDOMAIN ); ?>
-                                    <br> <input type="password" name="pwd" class="input user_pass" value="" size="20">
+                                    <br> <input type="password" autocomplete="" name="pwd" class="input user_pass" value="" size="20">
                                 </label>
                             </p>
                             <p>
@@ -71,12 +78,10 @@
                 </div>
                 <div class="modal-body">
                     <div id="sign-up" class="login">
-                        <h1>
+                        <h3>
                             <a href="<?php echo esc_url( home_url( '/' ) ); ?>" title="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" tabindex="-1"><?php echo esc_html__( 'Sign Up', WP_MANGA_TEXTDOMAIN ); ?></a>
-                        </h1>
+                        </h3>
                         <p class="message register"><?php echo esc_html__( 'Register For This Site.', WP_MANGA_TEXTDOMAIN ); ?></p>
-						<?php do_action( 'login_head' ); ?>
-						<?php do_action( 'login_enqueue_scripts' ); ?>
                         <form name="registerform" id="registerform" novalidate="novalidate">
                             <p>
                                 <label><?php echo esc_html__( 'Username *', WP_MANGA_TEXTDOMAIN ); ?>
@@ -92,11 +97,11 @@
                             </p>
                             <p>
                                 <label><?php echo esc_html__( 'Password *', WP_MANGA_TEXTDOMAIN ); ?><br>
-                                    <input type="password" name="pass_sign-up" class="input user_pass" value="" size="25">
+                                    <input type="password" name="pass_sign-up" autocomplete="" class="input user_pass" value="" size="25">
                                 </label>
                             </p>
                             <p>
-								<?php do_action( 'login_form' ); ?>
+								<?php do_action( 'register_form' ); ?>
                             </p>
 
                             <input type="hidden" name="redirect_to" value="">
@@ -128,9 +133,9 @@
                 </div>
                 <div class="modal-body">
                     <div id="reset" class="login">
-                        <h1>
+                        <h3>
                             <a href="javascript:void(0)" class="to-reset"><?php echo esc_html__( 'Lost your password?', WP_MANGA_TEXTDOMAIN ); ?></a>
-                        </h1>
+                        </h3>
                         <p class="message reset"><?php echo esc_html__( 'Please enter your username or email address. You will receive a link to create a new password via email.', WP_MANGA_TEXTDOMAIN ); ?></p>
                         <form name="resetform" id="resetform" method="post">
                             <p>
@@ -181,7 +186,7 @@
 					}
 				});
 
-				var gRecaptcha = $('.g-recaptcha');
+				var gRecaptcha = $('#form-login .g-recaptcha, #form-sign-up .g-recaptcha, #form-reset .g-recaptcha');
 				gRecaptcha.attr('data-callback', 'wpMangaSubmitSwitch');
 				gRecaptcha.attr('data-expired-callback', 'wpMangaSubmitSwitch');
 				gRecaptcha.attr('data-error', 'wpMangaSubmitSwitch');

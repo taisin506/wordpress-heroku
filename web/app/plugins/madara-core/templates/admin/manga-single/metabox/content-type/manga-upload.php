@@ -11,7 +11,10 @@
 ?>
 
 <div id="chapter-content-upload" class="tab-content manga-chapter-tab chapter-content-tab">
-    <div class="wp-manga-volume-section">
+    <?php do_action('wp_manga_content_chapter_before_form_upload', $manga_post);?>
+	
+	<div class="wp-manga-volume-section">
+		
         <h2>
             <label for="wp-manga-volume-upload"><?php esc_html_e( 'Volume', WP_MANGA_TEXTDOMAIN ); ?> </label>
         </h2>

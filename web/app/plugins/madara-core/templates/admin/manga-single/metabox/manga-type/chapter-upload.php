@@ -10,7 +10,7 @@
 
     wp_localize_script( 'wp-manga-upload', 'cloudStorageURLRegex', array(
         'imgur'  => 'https:\/\/imgur.com\/a\/(\S+)',
-        'amazon' => 'https:\/\/s3\.console\.aws\.amazon\.com\/s3\/buckets\/(\S+)\/\?region',
+        'amazon' => apply_filters('amazon_s3_cloud_folder_path_validate_js','https:\/\/s3\.console\.aws\.amazon\.com\/s3\/buckets\/(\S+)\/\?region'),
         'flickr' => 'https:\/\/www.flickr.com\/photos\/(\S+)\/albums\/(\d+)'
     ) );
 
@@ -18,8 +18,10 @@
     <div id="chapter-upload" class="tab-content manga-chapter-tab chapter-content-tab">
 
         <div class="chapter-input">
-
-            <div class="wp-manga-form-group">
+			
+			 <?php do_action( 'manga_single_chapter_before_form_fields', $manga_post ); ?>
+            
+			<div class="wp-manga-form-group">
                 <h2>
                     <label for="wp-manga-volume">
                         <?php esc_attr_e( 'Volume', WP_MANGA_TEXTDOMAIN ) ?>
@@ -54,7 +56,19 @@
                 </h2>
                 <input type="text" id="wp-manga-chapter-name-extend" name="wp-manga-chapter-name-extend" class="large-text disable-submit" value="" tabindex="1">
                 <span class="description">
-                    <?php esc_attr_e( 'Name extend of chapter for better display => Chapter name: Name extend', WP_MANGA_TEXTDOMAIN ); ?>
+                    <?php esc_attr_e( '(Optional) Name extend of chapter for better display => Chapter name: Name extend', WP_MANGA_TEXTDOMAIN ); ?>
+                </span>
+            </div>
+			
+			<div class="wp-manga-form-group">
+                <h2>
+                    <label for="wp-manga-chapter-name-extend">
+                        <?php esc_attr_e( 'Chapter Index', WP_MANGA_TEXTDOMAIN ) ?>
+                    </label>
+                </h2>
+                <input type="text" id="wp-manga-chapter-index" name="wp-manga-chapter-index" class="large-text disable-submit" value="" tabindex="1">
+                <span class="description">
+                    <?php esc_attr_e( '(Optional) Index of Chapter which is used to sort Chapters', WP_MANGA_TEXTDOMAIN ); ?>
                 </span>
             </div>
 
@@ -89,6 +103,7 @@
                         ?>
                     </select>
                     <?php $GLOBALS['wp_manga_google_upload']->albums_dropdown( $default_storage, true ); ?>
+					<?php do_action('wp_manga_storage_albumdropdown', $default_storage, 'chapter-upload');?>
                 </div>
 				<div class="wp-manga-form-group">
                     <h2>
@@ -168,7 +183,7 @@
                 <div class="wp-manga-form-group">
                     <h2>
                         <label for="wp-manga-cloud-storage">
-                            <?php esc_attr_e( 'Choose where to upload', WP_MANGA_TEXTDOMAIN ); ?>
+                            <?php esc_attr_e( 'Choose where to import', WP_MANGA_TEXTDOMAIN ); ?>
                         </label>
                     </h2>
                     <select id="wp-manga-cloud-storage" name="wp-manga-cloud-storage">

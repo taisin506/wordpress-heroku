@@ -1,6 +1,7 @@
 <?php
 
 	use App\Views\MadaraView;
+	use App\Madara;
 
 	/**
 	 * The Template for displaying all single posts.
@@ -35,7 +36,7 @@
 
 								<?php
 								// If comments are open or we have at least one comment, load up the comment template
-								if ( comments_open() || '0' != get_comments_number() ) :
+								if ( (comments_open() || '0' != get_comments_number()) && Madara::getOption('enable_comment', 'on') == 'on' ) :
 									comments_template();
 								endif;
 								?>

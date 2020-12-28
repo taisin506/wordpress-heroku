@@ -4,9 +4,11 @@
 var madara_SHORTCODES_LIST = {
 	blog: 'Blog',
 	heading: 'Heading',
-	post_slider: 'Post Slider',
-	manga_chapter: 'Manga Chapter',
-	manga_listing: 'Manga Listing',
+	post_slider: 'Posts Slider',
+	manga_chapters: 'Manga Chapters',
+	mangas_listing: 'Manga Listing',
+	manga_grid: 'Manga Grid',
+	manga_info: 'Manga Info'
 };
 
 /**

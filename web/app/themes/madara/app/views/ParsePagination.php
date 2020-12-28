@@ -103,9 +103,9 @@
                             <div class="nav-previous float-left">
 								<?php
 									if ( $rtlmode == 'on' ) {
-										echo get_previous_posts_link( wp_kses( __( '<span class="ion ion-android-arrow-forward meta-nav"></span> Older Posts', 'madara' ), array( 'span' => array( 'class' => array( '' ) ) ) ), $wp_query->max_num_pages );
+										echo get_previous_posts_link( wp_kses( __( '<span class="icon ion-md-arrow-forward meta-nav"></span> Older Posts', 'madara' ), array( 'span' => array( 'class' => array( '' ) ) ) ), $wp_query->max_num_pages );
 									} else {
-										echo get_next_posts_link( wp_kses( __( '<span class="ion ion-android-arrow-back meta-nav"></span> Older Posts', 'madara' ), array( 'span' => array( 'class' => array() ) ) ), $wp_query->max_num_pages );
+										echo get_next_posts_link( wp_kses( __( '<span class="icon ion-md-arrow-back meta-nav"></span> Older Posts', 'madara' ), array( 'span' => array( 'class' => array() ) ) ), $wp_query->max_num_pages );
 									}
 								?>
                             </div>
@@ -118,9 +118,9 @@
 								<?php
 
 									if ( $rtlmode == 'on' ) {
-										echo get_next_posts_link( wp_kses( __( 'Newer posts <span class="ion ion-android-arrow-back meta-nav"></span>', 'madara' ), array( 'span' => array( 'class' => array() ) ) ), $wp_query->max_num_pages );
+										echo get_next_posts_link( wp_kses( __( 'Newer posts <span class="icon ion-md-arrow-back meta-nav"></span>', 'madara' ), array( 'span' => array( 'class' => array() ) ) ), $wp_query->max_num_pages );
 									} else {
-										echo get_previous_posts_link( wp_kses( __( 'Newer posts <span class="ion ion-android-arrow-forward meta-nav"></span>', 'madara' ), array( 'span' => array( 'class' => array() ) ) ), $wp_query->max_num_pages );
+										echo get_previous_posts_link( wp_kses( __( 'Newer posts <span class="icon ion-md-arrow-forward meta-nav"></span>', 'madara' ), array( 'span' => array( 'class' => array() ) ) ), $wp_query->max_num_pages );
 									}
 
 								?>
@@ -185,7 +185,7 @@
                 <a href="javascript:void(0)" data-target="<?php echo esc_attr( $content_div ); ?>" data-template="<?php echo esc_attr( $template ); ?>" id="navigation-ajax" class="btn btn-default load-ajax">
                     <div class="load-title">
 						<?php echo esc_html__( 'LOAD MORE', 'madara' ); ?>
-                        <i class="ion-android-arrow-dropdown"></i>
+                        <i class="icon ion-md-arrow-dropdown"></i>
                     </div> &nbsp;<div></div>&nbsp;<div></div>&nbsp;<div></div>
                 </a>
             </nav>

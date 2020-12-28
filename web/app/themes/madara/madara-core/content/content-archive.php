@@ -9,21 +9,23 @@
 
 
 	//get ready
-	$thumb_size              = array( 110, 150 );
+	$thumb_size          = array( 110, 150 );
 	$madara_loop_index   = get_query_var( 'madara_loop_index' );
 	$madara_total_posts  = get_query_var( 'madara_post_count' );
 	$madara_page_sidebar = get_query_var( 'sidebar' );
 
 	$manga_hover_details     = Madara::getOption( 'manga_hover_details', 'off' );
+	
+	$manga_id = get_the_ID();
 
-	$alternative             = $wp_manga_functions->get_manga_alternative( get_the_ID() );
+	$alternative             = $wp_manga_functions->get_manga_alternative( $manga_id );
 
-	$authors                 = $wp_manga_functions->get_manga_authors( get_the_ID() );
-	$chapter_type = get_post_meta( get_the_ID(), '_wp_manga_chapter_type', true );
+	$authors                 = $wp_manga_functions->get_manga_authors( $manga_id );
+	$chapter_type = get_post_meta( $manga_id, '_wp_manga_chapter_type', true );
 
 	$manga_archives_item_layout = get_query_var('manga_archives_item_layout');
-	$item_columns = 3;
 	
+	$item_columns = 3;
 	if ( $madara_page_sidebar == 'full' ) {
 		if($manga_archives_item_layout == 'default' || $manga_archives_item_layout == 'small_thumbnail'){
 			$main_col_class = 'col-12 col-md-4';
@@ -50,7 +52,8 @@
 			$item_columns = 12;
 		}
 	}
-
+	
+	$title_badge_pos = Madara::getOption('manga_badge_position', 1); // 1: before title, 2: before thumbnail
 	if ( $madara_loop_index % $item_columns == 1 ) {
 ?>
 <div class="page-listing-item">
@@ -59,18 +62,21 @@
 			}
 		?>
 
-        <div class="<?php echo esc_attr( $main_col_class ); ?> ">
+        <div class="<?php echo esc_attr( $main_col_class ); ?> <?php echo 'badge-pos-' . esc_attr($title_badge_pos);?>">
             <div class="page-item-detail <?php echo esc_html($chapter_type);?>">
 				<?php 
 				if($manga_archives_item_layout == 'simple'){
 					get_template_part( 'madara-core/content/content-archive-simple' );
 				} else { ?>
-                <div id="manga-item-<?php echo esc_attr( get_the_ID() ); ?>" class="item-thumb <?php echo esc_attr($manga_hover_details == 'off' ? '' : 'hover-details'); ?> c-image-hover" data-post-id="<?php echo get_the_ID(); ?>">
+                <div id="manga-item-<?php echo esc_attr( $manga_id ); ?>" class="item-thumb <?php echo esc_attr($manga_hover_details == 'off' ? '' : 'hover-details'); ?> c-image-hover" data-post-id="<?php echo esc_attr($manga_id); ?>">
 					<?php
 						if ( has_post_thumbnail() ) {
 							?>
                             <a href="<?php the_permalink(); ?>" title="<?php the_title_attribute(); ?>">
 								<?php echo madara_thumbnail( $thumb_size ); ?>
+								<?php if($title_badge_pos == 2){?>
+								<?php madara_manga_title_badges_html( $manga_id, 1 ); ?>
+								<?php }?>
                             </a>
 							<?php
 						}
@@ -78,19 +84,21 @@
                 </div>
                 <div class="item-summary">
                     <div class="post-title font-title">
-                        <h5>
-							<?php madara_manga_title_badges_html( get_the_ID(), 1 ); ?>
+                        <h3 class="h5">
+							<?php if($title_badge_pos == 1){?>
+								<?php madara_manga_title_badges_html( $manga_id, 1 ); ?>
+							<?php }?>
                             <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
-                        </h5>
+                        </h3>
                     </div>
                     <div class="meta-item rating">
 						<?php
-							$wp_manga_functions->manga_rating_display( get_the_ID() );
+							$wp_manga_functions->manga_rating_display( $manga_id );
 						?>
                     </div>
                     <div class="list-chapter">
 						<?php
-							$wp_manga_functions->manga_meta( get_the_ID() );
+							$wp_manga_functions->manga_meta( $manga_id );
 						?>
                     </div>
                 </div>
@@ -106,5 +114,3 @@
 </div>
 <?php
 	}
-
-?>

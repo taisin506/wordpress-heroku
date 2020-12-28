@@ -120,11 +120,6 @@
     </thead>
     <tbody>
     <tr>
-        <td data-export-label="<?php echo esc_attr__('Server Info', 'madara'); ?>"><?php esc_html_e( 'Server Info:', 'madara' ); ?></td>
-        <td class="help"><?php echo '<a href="#" class="help_tip" data-tip="' . esc_attr__( 'Information about the web server that is currently hosting your site.', 'madara' ) . '">[?]</a>'; ?></td>
-        <td><?php echo esc_html( $_SERVER['SERVER_SOFTWARE'] ); ?></td>
-    </tr>
-    <tr>
         <td data-export-label="<?php echo esc_attr__('PHP Version', 'madara'); ?>"><?php esc_html_e( 'PHP Version:', 'madara' ); ?></td>
         <td class="help"><?php echo '<a href="#" class="help_tip" data-tip="' . esc_attr__( 'The version of PHP installed on your hosting server.', 'madara' ) . '">[?]</a>'; ?></td>
         <td><?php if ( function_exists( 'phpversion' ) ) {
@@ -205,11 +200,8 @@
 						}
 					}
 					$max_items = max( $menu_items_count );
-					if ( Madara()->settings->get( 'disable_megamenu' ) ) {
-						$required_input_vars = $max_items * 20;
-					} else {
-						$required_input_vars = $max_items * 12;
-					}
+					
+					$required_input_vars = $max_items * 12;
 				?>
                 <td>
 					<?php
@@ -236,11 +228,8 @@
 						}
 					}
 					$max_items = max( $menu_items_count );
-					if ( Madara()->settings->get( 'disable_megamenu' ) ) {
-						$required_input_vars = $max_items * 20;
-					} else {
-						$required_input_vars = ini_get( 'suhosin.request.max_vars' );
-					}
+					
+					$required_input_vars = ini_get( 'suhosin.request.max_vars' );
 				?>
                 <td>
 					<?php
@@ -302,11 +291,11 @@
     <tr>
         <td data-export-label="<?php echo esc_attr__( 'WP Remote Post', 'madara' ); ?>"><?php esc_html_e( 'WP Remote Post:', 'madara' ); ?></td>
         <td class="help"><?php echo '<a href="#" class="help_tip" data-tip="' . esc_attr__( 'Madara uses this method to communicate with different APIs, e.g. Google, Twitter, Facebook.', 'madara' ) . '">[?]</a>'; ?></td>
-		<?php $response = wp_safe_remote_post( 'https://envato.com/', array(
+		<?php $response = wp_safe_remote_post( 'https://mangabooth.com/', array(
 			'decompress' => false,
 			'user-agent' => 'madara-remote-get-test'
 		) ); ?>
-        <td><?php echo ( ! is_wp_error( $response ) && $response['response']['code'] >= 200 && $response['response']['code'] < 300 ) ? '<mark class="yes">&#10004;</mark>' : '<mark class="error">wp_remote_post() failed. Some theme features may not work. Please contact your hosting provider and make sure that ' . esc_url('https://envato.com/ is not blocked') . '.</mark>'; ?></td>
+        <td><?php echo ( ! is_wp_error( $response ) && $response['response']['code'] >= 200 && $response['response']['code'] < 300 ) ? '<mark class="yes">&#10004;</mark>' : '<mark class="error">wp_remote_post() failed. Some theme features may not work. Please contact your hosting provider and make sure that ' . esc_url('https://mangabooth.com/ is not blocked') . '.</mark>'; ?></td>
     </tr>
     <tr>
         <td data-export-label="<?php echo esc_attr__('GD Library', 'madara'); ?>"><?php esc_html_e( 'GD Library:', 'madara' ); ?></td>

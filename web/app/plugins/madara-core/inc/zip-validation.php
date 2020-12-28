@@ -8,8 +8,16 @@
 
         static function is_zip_valid( $zip_file, $chapter_type ){
 
-            $zip = self::get_zip_structure( $zip_file );
-
+            $zip = self::get_zip_structure( $zip_file, $chapter_type );
+			
+			if(is_wp_error($zip)){
+				return array(
+                    'is_valid' => false,
+                    'message' => $zip->get_error_message(),
+                    'data' => $zip
+                );
+			}
+			
             $is_valid = false;
 
             $chapter_type = $chapter_type == 'text' || $chapter_type == 'video' ? 'content' : 'manga';
@@ -34,11 +42,13 @@
         }
 
         //this function would read the zip file to manga structure : volume > chapter > chapter file
-        static function get_zip_structure( $zip_file ){
+        static function get_zip_structure( $zip_file, $type = '' ){
 
             $zip = zip_open( $zip_file );
 
             $zip_structure = array();
+			
+			$number_of_dirs = 0;
 
             while( $zip_entry = zip_read( $zip ) ){
 
@@ -46,14 +56,14 @@
 
                 //check if this is a dir or a file
                 $is_zip_dir = self::is_zip_dir( $entry_name );
-
+				
                 //if this zip hasn't defined if it's a single chapter zip or it was a single chapter zip
                 if( !isset( $is_single_chapter ) || $is_single_chapter ){
 
                     //check if this entry is a file
                     $extension = self::get_file_extension( $entry_name );
-
-                    if( $extension ){ //if it's a file, it's would be a manga single chapter zip file
+                    
+					if( !$is_zip_dir && $extension ){ //if it's a file, it's would be a manga single chapter zip file
                         $zip_structure[] = array(
                             'single_chapter_file' => basename( $entry_name ),
                             'extension'           => $extension
@@ -61,7 +71,7 @@
                         $is_single_chapter = true;
 
                         //get chapter type for single chapter zip file
-                        $images_extensions = array( 'jpg', 'jpeg', 'bmp', 'png', 'gif' );
+                        $images_extensions = WP_MANGA_FUNCTIONS::get_validated_image_extensions();
 
                         if( in_array( $extension, $images_extensions ) ){
                             $chapter_type = 'manga';
@@ -73,7 +83,7 @@
                             return new WP_Error( 'invalid_file', __( 'Invalid Zip file, file contains unwanted file. Please check agains', 'madara' ) );
                         }
 
-                    }else{
+                    } else {
 						
 						if($entry_name == '__MACOSX/'){
 							// ingore MACOS hidden folder
@@ -103,7 +113,7 @@
 
                     $extension = self::get_file_extension( $parts[0] );
 
-                    $images_extensions = array( 'jpg', 'jpeg', 'bmp', 'png', 'gif' );
+                    $images_extensions = WP_MANGA_FUNCTIONS::get_validated_image_extensions();
 
                     if( in_array( $extension, $images_extensions ) ){
                         $chapter_type = 'manga';
@@ -127,8 +137,9 @@
                             'extension' => $extension
                         );
                     }
-                }
-
+                } else {
+					$number_of_dirs++;
+				}
             }
 
             zip_close( $zip );
@@ -139,11 +150,17 @@
             *       - multi_chapters_with_volumes : contains volumes -> chapters -> images file
             *       - multi_chapters_no_volume : contains chapters -> images file
             */
+			
             if( $is_single_chapter ){
                 $zip_type = 'single_chapter';
                 $chapter_type = 'manga';
             }elseif( !isset( $zip_type ) ){
-                $zip_type = 'multi_chapters_no_volume';
+				if($number_of_dirs == 1){
+					$zip_type = 'single_chapter';
+					$chapter_type = 'manga';
+				} else {
+					$zip_type = 'multi_chapters_no_volume';
+				}
             }
 
             return array(

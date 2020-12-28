@@ -21,7 +21,7 @@
 
 			if ( is_admin() ) {
 				wp_enqueue_style( "ct_shortcode_admin_style", CT_SHORTCODE_PLUGIN_URL . 'assets/css/style-admin.css' );
-				wp_enqueue_script( 'ct_shortcode_admin', CT_SHORTCODE_PLUGIN_URL . 'assets/js/admin.js' );
+				wp_enqueue_script( 'ct_shortcode_admin', CT_SHORTCODE_PLUGIN_URL . 'assets/js/admin.js', array('jquery') );
 
 				add_action( 'save_post', array( &$this, 'madara_savepost_parse_shortcode_custom_css' ), 9999, 1 );
 

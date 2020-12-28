@@ -12,7 +12,7 @@
     <div class="c-search-header__wrapper" style="<?php echo esc_attr($search_header_background != '' ? $search_header_background : 'background-image: url(' . get_parent_theme_file_uri( '/images/bg-search.jpg' ) . ');'); ?>">
         <div class="container">
             <div class="search-content">
-                <form role="search" method="get" class="search-form">
+                <form role="search" method="get" class="search-form <?php echo ($madara_ajax_search == 'on' ? 'ajax' : '');?>">
                     <label> <span class="screen-reader-text"><?php esc_html_e( 'Search for:', 'madara' ); ?></span>
                         <input type="search" class="search-field" placeholder="<?php esc_html_e( 'Search...', 'madara' ); ?>" value="<?php echo esc_attr( $s ); ?>" name="s">
                     </label> <input type="submit" class="search-submit" value="<?php esc_html_e( 'Search', 'madara' ); ?>">
@@ -86,7 +86,7 @@
                         <div class="search-wrap no-results not-found">
                             <div class="results_content">
                                 <div class="icon-not-found">
-                                    <i class="ion-android-sad"></i>
+                                    <i class="icon ion-android-sad"></i>
                                 </div>
                                 <div class="not-found-content">
                                     <p><?php esc_html_e( 'No matches found. Try a different search...', 'madara' ); ?></p>
@@ -94,10 +94,9 @@
                             </div>
                         </div>
 						<?php
-					}
-					?>
-
-						<?php get_template_part( 'html/main-bodybottom' ); ?>
+						}
+						
+						get_template_part( 'html/main-bodybottom' ); ?>
 
                     </div>
                 </div>

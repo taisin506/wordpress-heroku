@@ -41,16 +41,19 @@
 	 * @code     Madara
 	 */
 	do_action( 'madara_before_body' );
-
+	
+	$minimal_reading_page = Madara::getOption( 'minimal_reading_page', 'off' );
+	$madara_ajax_search = Madara::getOption('madara_ajax_search', 'on');
 ?>
 
 <div class="wrap">
     <div class="body-wrap">
+		<?php if(!(function_exists('is_manga_reading_page') && is_manga_reading_page()) || $minimal_reading_page == 'off') {?>
         <header class="site-header">
             <div class="c-header__top">
                 <ul class="search-main-menu">
                     <li>
-                        <form id="blog-post-search" action="<?php echo esc_url( home_url( '/' ) ); ?>" method="get">
+                        <form id="blog-post-search" class="<?php echo ($madara_ajax_search == 'on' ? 'ajax' : '');?>" action="<?php echo esc_url( home_url( '/' ) ); ?>" method="get">
                             <input type="text" placeholder="<?php echo esc_html__( 'Search...', 'madara' ); ?>" name="s" value="">
                             <input type="submit" value="<?php esc_html_e( 'Search', 'madara' ); ?>">
                             <div class="loader-inner line-scale">
@@ -91,6 +94,6 @@
         </header>
 
 		<?php get_template_part( 'html/main-top' ); ?>
-
+		<?php } ?>
         <div class="site-content">
 <?php }

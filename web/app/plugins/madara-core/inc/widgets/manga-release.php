@@ -42,6 +42,8 @@ class Manga_Release_Widget extends WP_Widget {
                 'hide_empty' => true,
                 'exclude' => $exclude,
                 'number' => $number,
+				'orderby' => 'name',
+				'order' => 'desc'
             )
         );
 
@@ -63,7 +65,6 @@ class Manga_Release_Widget extends WP_Widget {
                     <ul class="list-released">
 
                         <?php
-                            $release_years = array_reverse( $release_years );
                             $flag = 0;
                             foreach( $release_years as $year ) {
                                 $flag ++;

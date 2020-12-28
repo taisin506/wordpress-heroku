@@ -44,6 +44,116 @@
 
 			// Save user player id for web push
 			add_action( 'wp_ajax_save_user_player_id', array( $this, 'save_user_player_id' ) );
+			
+			add_action('wp_ajax_manga_views', array($this, 'update_manga_views'));
+			add_action('wp_ajax_nopriv_manga_views', array($this, 'update_manga_views'));
+			
+			add_action('wp_ajax_manga_get_chapters', array($this, 'get_manga_chapters'));
+			add_action('wp_ajax_nopriv_manga_get_chapters', array($this, 'get_manga_chapters'));
+			
+			add_action('wp_ajax_manga_get_reading_nav', array($this, 'get_reading_nav'));
+			add_action('wp_ajax_nopriv_manga_get_reading_nav', array($this, 'get_reading_nav'));
+		}
+		
+		function get_manga_chapters(){
+			if(isset($_POST['manga'])) {
+				$manga_id = intval($_POST['manga']);
+				
+				global $wp_manga_functions, $wp_manga_database;
+		
+				$sort_option = $wp_manga_database->get_sort_setting();
+				
+				$manga = $wp_manga_functions->get_all_chapters( $manga_id, $sort_option['sort'] );
+				
+				$current_read_chapter = 0;
+				if ( is_user_logged_in() ) {
+					$user_id = get_current_user_id();
+					$history = madara_get_current_reading_chapter($user_id, $manga_id);
+					if($history){
+						$current_read_chapter = $history['c'];
+					}
+				}
+				
+				global $wp_manga_template;
+				
+				
+				include $wp_manga_template->load_template('single/info','chapters', false);
+				
+				wp_die();
+			}
+			
+			wp_send_json_error();
+		}
+		
+		function get_reading_nav(){
+			if(isset($_POST['manga']) && isset($_POST['volume_id'])) {
+					
+					$manga_id = $_POST['manga'];
+					$volume_id = $_POST['volume_id'];
+					$cur_chap = $_POST['chapter'];
+					$style = isset($_POST['style']) ? $_POST['style'] : '';
+					
+					
+					$html = '';
+					
+					ob_start();
+					
+					global $wp_manga_volume, $wp_manga_database;
+					$sort_setting = $wp_manga_database->get_sort_setting();
+
+					$sort_by    = $sort_setting['sortBy'];
+					$sort_order = $sort_setting['sort'];
+					
+					$all_chaps = $wp_manga_volume->get_volume_chapters( $manga_id, $volume_id, $sort_by, $sort_order );
+					
+					if($_POST['type'] == 'manga'){
+						global $wp_manga_chapter_type;
+						
+						$wp_manga_chapter_type->reading_chapters_nav($manga_id, $all_chaps, $volume_id, $cur_chap, $style);
+						
+					} else {
+						// text/video chapter
+						global $wp_manga_text_type;
+						$wp_manga_text_type->reading_chapters_nav($manga_id, $all_chaps, $volume_id, $cur_chap);
+					}
+
+					$html = ob_get_contents();
+					ob_end_clean();
+					
+					echo $html;
+					wp_die();
+				
+			}
+			
+			wp_send_json_error();
+		}
+		
+		/**
+		 * called to update manga views
+		 **/
+		function update_manga_views(){
+            global $wp_manga_setting;
+            
+            $enabled_manga_view = $wp_manga_setting->get_manga_option('manga_view', 1);
+            
+            if($enabled_manga_view){
+                if(isset($_POST['manga'])) {
+                    $manga_id = intval($_POST['manga']);
+                    $chapter_slug = '';
+                    if(isset($_POST['chapter']) && $_POST['chapter'] != 'undefined'){
+                        $chapter_slug = $_POST['chapter'];
+                    }
+                    
+                    global $wp_manga_functions;
+                    $wp_manga_functions->update_manga_views($manga_id, $chapter_slug);
+                    
+                    do_action('wp_manga_after_update_manga_views');
+                    
+                    wp_send_json_success( 'ok' );
+                }
+            }
+			
+			wp_send_json_error();
 		}
 
 		function save_user_player_id() {
@@ -104,7 +214,7 @@
 				if ( empty( $bookmark_manga ) && ! $is_manga_single ) {
 					wp_send_json_success( array(
 						'is_empty' => true,
-						'msg'      => wp_kses( __( '<span>You haven\'t bookmark any manga yet</span>', WP_MANGA_TEXTDOMAIN ), array( 'span' => array() ) )
+						'msg'      => wp_kses( __( '<span>You haven\'t bookmarked any manga yet</span>', WP_MANGA_TEXTDOMAIN ), array( 'span' => array() ) )
 					) );
 				};
 				$link = $wp_manga_functions->create_bookmark_link( $post_id, $is_manga_single );
@@ -166,12 +276,20 @@
 			if ( is_user_logged_in() ) {
 
 				$post_id    = isset( $_POST['postID'] ) ? $_POST['postID'] : '';
-				$chapter_id = isset( $_POST['chapter'] ) ? $_POST['chapter'] : null;
+				$chapter_slug = isset( $_POST['chapter'] ) ? $_POST['chapter'] : null;
 				$paged      = isset( $_POST['page'] ) ? $_POST['page'] : '';
 				$user_id    = get_current_user_id();
 
 				if ( empty( $post_id ) || empty( $user_id ) ) {
 					wp_send_json_error();
+				}
+				
+				global $wp_manga_chapter;
+				$chapter = $wp_manga_chapter->get_chapter_by_slug( $post_id, $chapter_slug );
+				if($chapter){
+					$chapter_id = $chapter['chapter_id'];
+				} else {
+					$chapter_id = 0;
 				}
 
 				$this_bookmark = array(
@@ -182,11 +300,11 @@
 				);
 
 				$current_bookmark = get_user_meta( $user_id, '_wp_manga_bookmark', true );
-
 				if ( ! empty( $current_bookmark ) && is_array( $current_bookmark ) ) {
 
 					//check if current manga is existed
-					$index = array_search( $post_id, array_column( $current_bookmark, 'id' ) );
+					$col = 'id';
+					$index = array_search( $post_id, array_map(function($element) use($col){return $element[$col];}, $current_bookmark) );
 
 					if ( $index !== false ) {
 						$this_bookmark['unread_c']  = $current_bookmark[ $index ]['unread_c'];
@@ -199,11 +317,21 @@
 				} else {
 					$current_bookmark = array( $this_bookmark );
 				}
+				
+				global $wp_manga_setting;
+				$max_bookmark_count = $wp_manga_setting->get_manga_option( 'user_bookmark_max', 30 );
+				
+				// only store $max_bookmark_count latest item in users_bookmarked;
+				$sliced_mangas = array();
+				if(count($current_bookmark) > $max_bookmark_count){
+					$sliced_mangas = array_slice($current_bookmark, 0, count($current_bookmark) - $max_bookmark_count);
+					$current_bookmark = array_slice($current_bookmark, count($current_bookmark) - $max_bookmark_count);
+				}
 
 				$response = update_user_meta( $user_id, '_wp_manga_bookmark', $current_bookmark );
 
-				if ( $response == true ) {
-
+				if ( $response ) {
+					
 					if ( empty( $manga_existed ) ) {
 						// Update user id to manga bookmarked meta
 						$users_bookmarked = get_post_meta( $post_id, '_wp_user_bookmarked', true );
@@ -219,11 +347,24 @@
 						update_post_meta( $post_id, '_wp_user_bookmarked', $users_bookmarked );
 					}
 
-					if ( empty( $chapter ) ) {
+					$is_manga_single = false;
+					if ( empty( $chapter_slug ) ) {
 						$is_manga_single = true;
 					}
-
-					$link = $wp_manga_functions->create_bookmark_link( $post_id, $is_manga_single );
+					
+					$link = $wp_manga_functions->create_bookmark_link( $post_id, $is_manga_single, $chapter_slug );
+					
+					// remove $user_id in sliced mangas 
+					if(count($sliced_mangas) > 0){
+						foreach($sliced_mangas as $key => $sliced_manga){
+							$users_bookmarked = get_post_meta( $sliced_manga['id'], '_wp_user_bookmarked', true );
+							if ( is_array( $users_bookmarked ) && ($idx = array_search($user_id, $users_bookmarked)) !== false ) {
+								unset($users_bookmarked[$idx]);
+								update_post_meta( $sliced_manga['id'], '_wp_user_bookmarked', $users_bookmarked );
+							}
+						}
+					}
+					
 					wp_send_json_success( $link );
 				}
 
@@ -324,7 +465,18 @@
 
 			$postID = isset( $_POST['postID'] ) ? $_POST['postID'] : null;
 			$rating = isset( $_POST['star'] ) ? $_POST['star'] : null;
-			if ( $postID ) {
+            
+            global $wp_manga_setting;
+			$guest_rating = $wp_manga_setting->get_manga_option( 'guest_rating', 1 );
+            
+            $logged_in = is_user_logged_in();
+            
+            if(!$guest_rating && !$logged_in){
+                // if not allow guest rating, and user is not logged in
+                return;
+            }
+
+			if ( !empty( $rating ) && $postID ) {
 				$key          = '_manga_reviews';
 				$prev_reviews = get_post_meta( $postID, $key, true );
 
@@ -332,7 +484,7 @@
 					$prev_reviews = array();
 				}
 
-				if ( is_user_logged_in() ) {
+				if ( $logged_in ) {
 					$new_reviews                          = $prev_reviews;
 					$new_reviews[ get_current_user_id() ] = $rating;
 				} else {
@@ -355,53 +507,80 @@
 		}
 
 		function wp_manga_upload_avatar() {
+			global $wp_manga_setting;
+			$user_can_upload_avatar = $wp_manga_setting->get_manga_option('user_can_upload_avatar', '1');
+			
+			if($user_can_upload_avatar == '1'){
+				if( empty( $_FILES['userAvatar'] ) ){
+					wp_send_json_error();
+				}
 
-			$avatar_file = $_FILES['userAvatar'];
-			$user_id     = isset( $_POST['userID'] ) ? $_POST['userID'] : '';
+				$avatar_file = $_FILES['userAvatar'];
+				$user_id     = isset( $_POST['userID'] ) ? $_POST['userID'] : '';
 
-			if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], '_wp_manga_save_user_settings' ) || empty( $user_id ) ) {
-				wp_send_json_error( array( 'msg' => __( 'I smell some cheating here', WP_MANGA_TEXTDOMAIN ) ) );
+				if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], '_wp_manga_save_user_settings' ) || empty( $user_id ) ) {
+					wp_send_json_error( array( 'msg' => __( 'I smell some cheating here', WP_MANGA_TEXTDOMAIN ) ) );
+				}
+
+				//handle upload
+				require_once( ABSPATH . 'wp-admin/includes/admin.php' );
+				$avatar = wp_handle_upload( $avatar_file, array('test_form' => false, 'mimes' => array('jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif')) );
+				
+				if ( isset( $avatar['error'] ) || isset( $avatar['upload_error_handler'] ) ) {
+					wp_send_json_error( array( 'msg' => __( 'Upload failed! Please try again later', WP_MANGA_TEXTDOMAIN ) ) );
+				}
+
+				//resize avatar
+				$avatar_editor = wp_get_image_editor( $avatar['file'] );
+				if ( ! is_wp_error( $avatar_editor ) ) {
+					$avatar_editor->resize( 195, 195, false );
+					$avatar_editor->save( $avatar['file'] );
+				}
+
+				//media upload
+				$avatar_media = array(
+					'post_mime_type' => $avatar['type'],
+					'post_title'     => '_wp_user_' . $user_id . '_avatar',
+					'post_content'   => '',
+					'post_status'    => 'inherit',
+					'guid'           => $avatar['url'],
+					'post_author'    => $user_id,
+				);
+				
+				$avatar_id = wp_insert_attachment( $avatar_media, $avatar['file'] );
+
+				if ( $avatar_id == 0 ) {
+					wp_send_json_error( array( 'msg' => __( 'Upload failed! Please try again later', WP_MANGA_TEXTDOMAIN ) ) );
+				}
+				
+
+				$imagenew = get_post( $avatar_id );
+				$fullsizepath = get_attached_file( $imagenew->ID );
+				$attach_data = wp_generate_attachment_metadata( $avatar_id, $fullsizepath );
+				wp_update_attachment_metadata( $avatar_id, $attach_data );
+				
+				// remove old avatar
+				$current_avatar_id = get_user_meta( $user_id, '_wp_manga_user_avt_id', true );
+				
+				$attachment_meta = wp_delete_attachment($current_avatar_id, true);
+				if($attachment_meta !== false && $attachment_meta){
+					$file_url = $attachment_meta->guid;
+					$upload_dir = wp_upload_dir();
+					
+					$file_path = str_replace(home_url('/'), ABSPATH, $file_url);
+					if(file_exists($file_path)){
+						unlink($file_path);
+					}
+				}
+
+				//update metadata
+				$user_meta   = update_user_meta( $user_id, '_wp_manga_user_avt_id', $avatar_id );
+				$avatar_meta = update_post_meta( $avatar_id, '_wp_manga_user_id', $user_id );
+
+				if ( ! empty( $user_meta ) && ! empty( $avatar_meta ) ) {
+					wp_send_json_success( get_avatar( $user_id, 195 ) );
+				}
 			}
-
-			//handle upload
-			require_once( ABSPATH . 'wp-admin/includes/admin.php' );
-			$avatar = wp_handle_upload( $avatar_file, array( 'test_form' => false ) );
-
-			if ( isset( $avatar['error'] ) || isset( $avatar['upload_error_handler'] ) ) {
-				wp_send_json_error( array( 'msg' => __( 'Upload failed! Please try again later', WP_MANGA_TEXTDOMAIN ) ) );
-			}
-
-			//resize avatar
-			$avatar_editor = wp_get_image_editor( $avatar['file'] );
-			if ( ! is_wp_error( $avatar_editor ) ) {
-				$avatar_editor->resize( 195, 195, false );
-				$avatar_editor->save( $avatar['file'] );
-			}
-
-			//media upload
-			$avatar_media = array(
-				'post_mime_type' => $avatar['type'],
-				'post_title'     => '_wp_user_' . $user_id . '_avatar',
-				'post_content'   => '',
-				'post_status'    => 'inherit',
-				'guid'           => $avatar['url'],
-				'post_author'    => $user_id,
-			);
-
-			$avatar_id = wp_insert_attachment( $avatar_media, $avatar['url'] );
-
-			if ( $avatar_id == 0 ) {
-				wp_send_json_error( array( 'msg' => __( 'Upload failed! Please try again later', WP_MANGA_TEXTDOMAIN ) ) );
-			}
-
-			//update metadata
-			$user_meta   = update_user_meta( $user_id, '_wp_manga_user_avt_id', $avatar_id );
-			$avatar_meta = update_post_meta( $avatar_id, '_wp_manga_user_id', $user_id );
-
-			if ( ! empty( $user_meta ) && ! empty( $avatar_meta ) ) {
-				wp_send_json_success( get_avatar( $user_id, 195 ) );
-			}
-
 		}
 
 		function wp_manga_get_user_section() {
@@ -439,13 +618,22 @@
 			$this_post = get_post( $_GET['postID'] );
 
 			$post = $this_post;
-			$wp_query->set( 'chapter', $_GET['chapter'] );
 
 			$chapter = $wp_manga_chapter->get_chapter_by_slug( $_GET['postID'], $_GET['chapter'] );
 
 			if ( empty( $chapter ) ) {
 				$this->send_json( 'error', esc_html__( 'Chapter not found', WP_MANGA_TEXTDOMAIN ) );
 			}
+			
+			$options = get_option( 'wp_manga_settings', array() );
+			$chapter_slug_or_id = isset( $options['chapter_slug_or_id'] ) ? $options['chapter_slug_or_id'] : 'slug';
+				
+			if($chapter_slug_or_id == 'id'){
+				$wp_query->set( 'chapter', $chapter['chapter_id'] );
+				$_GET['chapter'] = $chapter['chapter_slug'];
+			}
+			
+			set_query_var('chapter', $_GET['chapter']);
 
 			$volume = $wp_manga_chapter->get_chapter_volume( $_GET['postID'], $chapter['chapter_id'] );
 
@@ -459,14 +647,13 @@
 			ob_start();
 
 			$paged = ! empty( $_GET[$wp_manga->manga_paged_var] ) ? $_GET[$wp_manga->manga_paged_var] : 1;
+			
 			$style = ! empty( $_GET['style'] ) ? $_GET['style'] : 'paged';
 
-			?>
-
-			<?php echo apply_filters( 'madara_ads_before_content', madara_ads_position( 'ads_before_content', 'body-top-ads' ) ); ?>
+			echo apply_filters( 'madara_ads_before_content', madara_ads_position( 'ads_before_content', 'body-top-ads' ) ); ?>
 
             <div class="reading-content">
-
+				<input type="hidden" id="wp-manga-current-chap" data-id="<?php echo esc_attr($chapter['chapter_id']);?>" value="<?php echo esc_attr($_GET['chapter']);?>"/>
 				<?php 
 				
 				/**
@@ -475,10 +662,16 @@
 				$alternative_content = apply_filters('wp_manga_chapter_content_alternative', '');
 				
 				if(!$alternative_content){
-					if ( $wp_manga->is_content_manga( $_GET['postID'] ) ) {
+					$manga_type = $wp_manga->is_content_manga( $_GET['postID'] );
+					
+					if ( $manga_type ) {
+						set_query_var('chapter', $_GET['chapter']);
 						$GLOBALS['wp_manga_template']->load_template( 'reading-content/content', 'reading-content', true );
 					} else {
+						set_query_var($wp_manga->manga_paged_var, $paged);
+						set_query_var('chapter', $_GET['chapter']);
 						$GLOBALS['wp_manga_template']->load_template( 'reading-content/content', 'reading-' . $style, true );
+						
 					}
 				} else {
 					echo $alternative_content;
@@ -495,17 +688,16 @@
 			ob_end_clean();
 
 			ob_start();
-
+			
 			$wp_manga->manga_nav( 'footer' );
 
 			$output['nav'] = ob_get_contents();
 
-			$output = apply_filters( 'madara_ajax_next_page_content', $output );
-
 			ob_end_clean();
 
-			$this->send_json( 'success', '', $output );
+			$output = apply_filters( 'madara_ajax_next_page_content', $output );
 
+			$this->send_json( 'success', '', $output );
 		}
 
 		function wp_manga_search_manga() {
@@ -515,7 +707,7 @@
 				wp_send_json_error( array(
 					array(
 						'error'   => 'empty title',
-						'message' => __( 'No manga found', WP_MANGA_TEXTDOMAIN ),
+						'message' => esc_html__( 'No manga found', WP_MANGA_TEXTDOMAIN ),
 					)
 				) );
 			}
@@ -539,9 +731,12 @@
 				$html = '';
 				while ( $query->have_posts() ) {
 					$query->the_post();
+					$manga_id = get_the_ID();
+					$type = get_post_meta($manga_id, '_wp_manga_chapter_type', true);
 					$results[] = array(
-						'title' => get_post_field( 'post_title', get_the_ID() ),
-						'url'   => get_permalink( get_the_ID() )
+						'title' => get_post_field( 'post_title', $manga_id ),
+						'url'   => get_permalink( $manga_id ),
+						'type' => $type ? $type : 'manga'
 					);
 				}
 				wp_reset_query();

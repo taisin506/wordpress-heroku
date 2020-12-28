@@ -1,7 +1,7 @@
 <div class="no-results not-found">
     <div class="results_content">
         <div class="icon-not-found">
-            <i class="ion-android-sad"></i>
+            <i class="icon ion-android-sad"></i>
         </div>
         <div class="not-found-content">
             <p>

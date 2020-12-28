@@ -832,3 +832,66 @@
 .c-projects .c-thumbnail.light-box:hover {
   opacity: 0.7;
 }
+
+.text2row {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    word-wrap: break-word;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.grid9 .item{display: inline-block}
+body:not(.mobile) .grid9{margin:0; padding:0; list-style: none}
+body:not(.mobile) .grid9 .item{float: left; margin:0 17px 34px 17px}
+body:not(.mobile) .grid9:after{content:'';display:block;clear:both}
+body:not(.mobile) .grid9 .item:nth-child(5),body:not(.mobile)  .grid9 .item:nth-child(9){margin-right: 0}
+body:not(.mobile) .grid9 .grid_col_4{width: 380px; background: #FFF; height: 700px; margin-left: 0}
+.grid9 .grid_col_4 .item-inner{padding: 20px}
+body:not(.mobile) .grid9 .grid_col_2{width: 148px; min-height: 324px}
+.grid9 .grid_col_2 .post-title h3{font-size:14px}
+.grid9 .item-thumb{text-align: center; margin:0 0 10px 0}
+body:not(.mobile) .grid9 .grid_col_2 .item-thumb{height: 214px}
+.grid9 .grid_col_4 .item-thumb{margin-bottom: 20px}
+.grid9 .grid_col_4 .post-title a{color: #000}
+.grid9 .post-title h3{margin: 0}
+.grid9 .meta-item.rating .ratings_stars{font-size:18px;}
+.grid9 .meta-item.rating .score{font-size:16px; padding: 0 6px}
+.grid9 .grid_col_4 .meta-item.genres{font-size: 13px}
+.grid9 .grid_col_4 .meta-item.genres a, .grid9 .grid_col_4 a.c-read-more-link{color:#999}
+.c-blog-post .entry-content .entry-content_wrap .grid9 .grid_col_4 .description p{margin-bottom: 0}
+
+@media (max-width: 1200px){
+	body:not(.mobile) .grid9 .item:nth-child(4), body:not(.mobile) .grid9 .item:nth-child(7){margin-right: 0}
+	body:not(.mobile) .grid9 .item:nth-child(5), body:not(.mobile) .grid9 .item:nth-child(9){margin-right: 17px}
+	body:not(.mobile) .grid9 .item:nth-child(8), body:not(.mobile) .grid9 .item:nth-child(9){display: none}
+}
+
+@media (max-width: 992px){
+	body:not(.mobile) .grid9 .item:nth-child(4),body:not(.mobile) .grid9 .item:nth-child(5){margin-bottom:0}
+	body:not(.mobile) .grid9 .item:nth-child(8), body:not(.mobile) .grid9 .item:nth-child(9){display: block}
+	body:not(.mobile) .grid9 .item:nth-child(3), body:not(.mobile) .grid9 .item:nth-child(5),body:not(.mobile) .grid9 .item:nth-child(7), body:not(.mobile) .grid9 .item:nth-child(9){margin-right: 0}
+	body:not(.mobile) .grid9 .item:nth-child(4){margin-right: 17px; }
+	body:not(.mobile) .grid9 .grid_col_4{width: 330px; height: 675px; margin-bottom: 0; margin-right: 13px}
+	body:not(.mobile) .grid9 .item:nth-child(6){clear:both; margin-left: 0}
+	body:not(.mobile) .grid9 .item:nth-child(6),body:not(.mobile) .grid9 .item:nth-child(7),body:not(.mobile) .grid9 .item:nth-child(8),body:not(.mobile) .grid9 .item:nth-child(9){margin-top:20px}
+}
+
+.grid9 .slick-prev{left:0; z-index: 1}
+.grid9 .slick-next{right:0; z-index: 1}
+.grid9 .slick-prev:before, .grid9 .slick-next:before{font-size: 25px}
+.grid9{display: none}
+
+.grid9.block, .grid9.slick-initialized{display: block}
+.mobile .grid9 .item{padding:0 5px}
+.mobile .grid9 .description{display: none}
+
+
+.manga-chapters-listing{}
+.manga-chapters-listing th.genre, .manga-chapters-listing th.time{width: 120px}
+.manga-chapters-listing th.title{width: 50%}
+.manga-chapters-listing .font-meta{font-size:1em}
+
+.grid9.block .badge-pos-2 .item-thumb{position: relative}
+.grid9.block .badge-pos-2 .item-thumb .manga-title-badges{left:0}

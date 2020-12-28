@@ -3,7 +3,6 @@
 	/**
 	 * Initialize the Post Metaboxes. See /option-tree/assets/theme-mode/demo-meta-boxes.php for reference
 	 *
-	 * @since Madara Alpha 1.0
 	 * @package madara
 	 */
 
@@ -11,7 +10,27 @@
 
 	if ( ! function_exists( 'madara_post_MetaBoxes' ) ) {
 		function madara_post_MetaBoxes() {
-
+			$manga_badges = madara_get_badge_choices();
+			
+			$badge_choices = array(
+							array(
+								'value' => 'no',
+								'label' => esc_html__( 'No', 'madara' )
+							)
+						);
+			foreach($manga_badges as $badge){
+				array_push($badge_choices, array(
+									'value' => sanitize_title($badge),
+									'label' => $badge
+								));
+			}
+			
+			array_push($badge_choices,
+							array(
+								'value' => 'custom',
+								'label' => esc_html__( 'Custom', 'madara' )
+							));
+			
 			$post_meta_boxes = array(
 				'id'       => 'manga_other_settings',
 				'title'    => esc_html__( 'Other Settings', 'madara' ),
@@ -30,18 +49,36 @@
 						'choices' => array(
 							array(
 								'value' => 'default',
-								'label' => esc_html__( 'Default', 'madara' ),
-								'src'   => ''
+								'label' => esc_html__( 'Default', 'madara' )
 							),
 							array(
 								'value' => 'paged',
-								'label' => esc_html__( 'Paged', 'madara' ),
-								'src'   => ''
+								'label' => esc_html__( 'Paged', 'madara' )
 							),
 							array(
 								'value' => 'list',
-								'label' => esc_html__( 'List', 'madara' ),
-								'src'   => ''
+								'label' => esc_html__( 'List', 'madara' )
+							),
+						)
+					),
+					
+					array(
+						'id'       => 'manga_reading_content_gaps',
+						'label'    => esc_html__( 'Gaps between images', 'madara' ),
+						'desc'     => esc_html__( 'Enable gaps between images in chapter (used for Manga Chapter Type', 'madara' ),
+						'type'     => 'select',
+						'choices' => array(
+							array(
+								'value' => 'default',
+								'label' => esc_html__( 'Default', 'madara' )
+							),
+							array(
+								'value' => 'on',
+								'label' => esc_html__( 'Yes', 'madara' )
+							),
+							array(
+								'value' => 'off',
+								'label' => esc_html__( 'No', 'madara' )
 							),
 						)
 					),
@@ -68,28 +105,7 @@
 						'desc'    => esc_html__( 'Choose Manga Title Badges', 'madara' ),
 						'std'     => '',
 						'type'    => 'select',
-						'choices' => array(
-							array(
-								'value' => 'no',
-								'label' => esc_html__( 'No', 'madara' ),
-								'src'   => ''
-							),
-							array(
-								'value' => 'hot',
-								'label' => esc_html__( 'Hot', 'madara' ),
-								'src'   => ''
-							),
-							array(
-								'value' => 'new',
-								'label' => esc_html__( 'New', 'madara' ),
-								'src'   => ''
-							),
-							array(
-								'value' => 'custom',
-								'label' => esc_html__( 'Custom', 'madara' ),
-								'src'   => ''
-							)
-						)
+						'choices' => $badge_choices
 					),
 					array(
 						'id'        => 'manga_custom_badges',
@@ -129,10 +145,18 @@
 
 					array(
 						'id'    => 'manga_profile_background',
-						'label' => esc_html__( 'Manga Profiles Background', 'madara' ),
-						'desc'  => esc_html__( 'Upload your background image for Single Manga Profiles', 'madara' ),
+						'label' => esc_html__( 'Manga Single - Background', 'madara' ),
+						'desc'  => esc_html__( 'Upload background image used in Manga detail page', 'madara' ),
 						'std'   => '',
 						'type'  => 'background',
+					),
+					
+					array(
+						'id'    => 'manga_banner',
+						'label' => esc_html__( 'Manga Banner Image', 'madara' ),
+						'desc'  => esc_html__( 'Upload banner image (horizontal/wide ratio) used in Manga Slider and other places', 'madara' ),
+						'std'   => '',
+						'type'  => 'upload',
 					),
 
 					// SEO customization option

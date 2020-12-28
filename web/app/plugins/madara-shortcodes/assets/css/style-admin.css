@@ -7,8 +7,10 @@
 #madara_shortcode_typo,
 #madara_shortcode_blog,
 #madara_shortcode_heading,
-#madara_shortcode_manga_listing,
-#madara_shortcode_manga_chapter {
+#madara_shortcode_mangas_listing,
+#madara_shortcode_manga_grid,
+#madara_shortcode_manga_info,
+#madara_shortcode_manga_chapters {
     display: none;
 }
 

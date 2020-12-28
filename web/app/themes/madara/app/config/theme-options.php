@@ -70,6 +70,10 @@
 			array(
 				'id'    => 'misc',
 				'title' => '<i class="fas fa-sliders"></i>' . esc_html__( 'Misc', 'madara' ),
+			),
+			array(
+				'id'    => 'amp',
+				'title' => '<i class="fas fa-bolt"></i>' . esc_html__( 'AMP', 'madara' ),
 			)
 		),
 		'settings'        => array(
@@ -259,6 +263,15 @@
 				'type'         => 'spacing',
 				'section'      => 'theme_layout',
 				'min_max_step' => '',
+			),
+				
+			array(
+				'id'      => 'login_popup_background',
+				'label'   => esc_html__( 'Login/Register Popup Background', 'madara' ),
+				'desc'    => esc_html__( 'Upload background image for Login/Register Popup', 'madara' ),
+				'std'     => '',
+				'type'    => 'background',
+				'section' => 'theme_layout',
 			),
 
 			/*
@@ -1155,6 +1168,15 @@
 				'type'    => 'on-off',
 				'section' => 'header',
 			),
+            
+            array(
+				'id'      => 'header_disable_login_buttons',
+				'label'   => esc_html__( 'Default Login Buttons', 'madara' ),
+				'desc'    => esc_html__( 'In case you plan to use a custom Login/Register buttons somewhere else, you can hide the default button on header', 'madara' ),
+				'std'     => 'on',
+				'type'    => 'on-off',
+				'section' => 'header',
+			),
 
 			/*
             * Archives
@@ -1305,8 +1327,8 @@
 
 			array(
 				'id'       => 'post_meta_tags',
-				'label'    => esc_html__( 'Enable Post Meta Tags', 'madara' ),
-				'desc'     => esc_html__( 'Enable Post Meta Tags', 'madara' ),
+				'label'    => esc_html__( 'Enable Post Tags', 'madara' ),
+				'desc'     => esc_html__( 'Show Post Tags in', 'madara' ),
 				'std'      => 'on',
 				'type'     => 'on-off',
 				'section'  => 'single_post',
@@ -1322,6 +1344,16 @@
 				'section'   => 'single_post',
 				'condition' => 'post_meta_tags:is(on)',
 			),
+			
+			array(
+				'id'       => 'enable_comment',
+				'label'    => esc_html__( 'Enable Comments', 'madara' ),
+				'desc'     => esc_html__( 'You can disable Comments Form in single post only', 'madara' ),
+				'std'      => 'on',
+				'type'     => 'on-off',
+				'section'  => 'single_post',
+				'operator' => 'and'
+			),
 
 			/*
          * Single Page
@@ -1333,11 +1365,6 @@
 				'std'          => 'right',
 				'type'         => 'radio-image',
 				'section'      => 'single_page',
-				'rows'         => '',
-				'post_type'    => '',
-				'taxonomy'     => '',
-				'min_max_step' => '',
-				'class'        => '',
 				'choices'      => array(
 					array(
 						'value' => 'left',
@@ -1749,6 +1776,61 @@
 						'src'   => get_parent_theme_file_uri( '/images/options/ajax-loading/square-spin.gif' ),
 					),
 				),
+				
+				
+			),
+			
+			array(
+				'id'        => 'amp',
+				'label'     => esc_html__( 'Enable AMP URLs', 'madara' ),
+				'desc'      => esc_html__( 'AMP is a special link that is lightweight and stripped down.  The mobile user gets a much-improved experience: content is faster, more engaging, and easier-to-read. AMP was specifically built for publishers, and publishers still make up a big chunk of AMP content out there. In Madara, AMP URLs work for Manga Detail and Manga Reading page only. You can try to append "/amp" to the URL to see how it works. Require "AMP Plugin" (https://wordpress.org/plugins/amp/). Read more about AMP here: https://amp.dev/about/how-amp-works/', 'madara' ),
+				'std'       => 'off',
+				'type'      => 'on-off',
+				'section'   => 'amp',
+				'operator'  => 'and'
+			),
+			
+			array(
+				'id'        => 'amp_fontawesome_key',
+				'label'     => esc_html__( 'FontAwesome Key', 'madara' ),
+				'desc'      => esc_html__( 'In an AMP link, local lib for Font Icons cannot be loaded. Thus, we need to load it from FontAwesome CDN. Register your email here: https://fontawesome.com/start and get the Key', 'madara' ),
+				'std'       => '',
+				'type'      => 'text',
+				'section'   => 'amp',
+				'condition' => 'amp:is(on)'
+			),
+			
+			array(
+				'id'        => 'amp_image_height',
+				'label'     => esc_html__( 'Image Height (in px)', 'madara' ),
+				'desc'      => esc_html__( 'In an AMP link, images of a chapter should have same height. You can specify the height of images here for better display. You can set this value in each Manga and Chapter as well', 'madara' ),
+				'std'       => '400',
+				'type'      => 'text',
+				'section'   => 'amp',
+				'operator'  => 'and',
+				'condition' => 'amp:is(on)'
+			),
+			
+			array(
+				'id'        => 'amp_manga_reading_style',
+				'label'     => esc_html__( 'Chapter Reading in List or Slides mode', 'madara' ),
+				'desc'      => esc_html__( 'For Manga Chapter (Images) Reading page, use Images Listing or Slides mode', 'madara' ),
+				'std'       => '400',
+				'type'      => 'select',
+				'section'   => 'amp',
+				'choices' => array(
+					array(
+						'value' => 'list',
+						'label' => esc_html__( 'List', 'madara' ),
+						'src'   => ''
+					),
+					array(
+						'value' => 'slides',
+						'label' => esc_html__( 'Slides', 'madara' ),
+						'src'   => ''
+					)
+				),
+				'condition' => 'amp:is(on)'
 			),
 
 			/*

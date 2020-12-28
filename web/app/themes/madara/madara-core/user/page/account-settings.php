@@ -5,23 +5,24 @@
 
 	$account_resp = isset( $_POST['account-form-submit'] )  ? madara_update_user_settings() : null;
 
-	$user_id = get_current_user_id();
-	$user    = get_user_by( 'ID', $user_id );
-
+	$user    = wp_get_current_user();
+	if($user) $user_id = $user->ID;
 
 ?>
 <form method="post">
 
-	<?php if ( $account_resp == true ) { ?>
-        <div class="alert alert-success alert-dismissable">
-            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-            <strong><?php esc_html_e( 'Success!', 'madara' ); ?></strong> <?php esc_html_e( ' Update successfully', 'madara' ); ?>
-        </div>
-	<?php } elseif ( $account_resp === false ) { ?>
-        <div class="alert alert-danger alert-dismissable">
-            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-            <strong><?php esc_html_e( 'Failed!', 'madara' ); ?></strong><?php esc_html_e( ' Update Failed, please try again ', 'madara' ); ?>
-        </div>
+	<?php if( $account_resp !== null ){ ?>
+		<?php if ( ! is_wp_error( $account_resp ) ) { ?>
+	        <div class="alert alert-success alert-dismissable">
+	            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+	            <strong><?php esc_html_e( 'Success!', 'madara' ); ?></strong> <?php esc_html_e( 'Update successfully', 'madara' ); ?>
+	        </div>
+		<?php } else { ?>
+	        <div class="alert alert-danger alert-dismissable">
+	            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+	            <strong><?php esc_html_e( 'Failed!', 'madara' ); ?></strong> <?php echo esc_html( $account_resp->get_error_message() ); ?>
+	        </div>
+		<?php } ?>
 	<?php } ?>
 
     <input type="hidden" value="<?php echo esc_attr( $user_id ); ?>" name="userID">
@@ -38,17 +39,27 @@
 					<?php echo get_avatar( $user_id, 195 ); ?>
 				</div>
             </div>
+			<?php 
+			global $wp_manga_setting;
+			
+			$user_can_upload_avatar = $wp_manga_setting->get_manga_option('user_can_upload_avatar', '1');
+			if($user_can_upload_avatar == '1'){?>
             <div class="form form-choose-avatar">
                 <div class="select-flie">
                     <!--Update Avatar -->
                     <form action="#">
 						<?php esc_html_e( 'Only for .jpg .png or .gif file', 'madara' ); ?>
-                        <label class="select-avata"><input type="file" name="wp-manga-user-avatar"></label>
+                        <label class="select-avata">
+							<input type="file" name="wp-manga-user-avatar">
+							<span class="file-name"></span>
+						</label>
+							
                         <input type="submit" value="<?php esc_html_e( 'Upload', 'madara' ); ?>" name="wp-manga-upload-avatar" id="wp-manga-upload-avatar">
                     </form>
 
                 </div>
             </div>
+			<?php } ?>
         </div>
         <div class="tab-item">
 

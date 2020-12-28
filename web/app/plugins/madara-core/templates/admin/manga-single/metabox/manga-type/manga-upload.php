@@ -10,6 +10,9 @@
 
 ?>
     <div id="manga-upload" class="tab-content manga-chapter-tab chapter-content-tab">
+		
+		<?php do_action( 'manga_multi_chapter_before_upload_form_fields', $manga_post ); ?>
+		
         <h2>
             <?php echo esc_html__('Upload Manga', WP_MANGA_TEXTDOMAIN); ?>
         </h2>
@@ -24,6 +27,7 @@
                 ?>
             </select>
             <?php $GLOBALS['wp_manga_google_upload']->albums_dropdown( $default_storage, true ); ?>
+			<?php do_action('wp_manga_storage_albumdropdown', $default_storage, 'manga-upload');?>
         </p>
 
         <div class="wp-manga-volume-section">
@@ -60,6 +64,7 @@
             <div class="notice-message">
                 <h4><?php esc_html_e( 'Allowed .zip file structures', WP_MANGA_TEXTDOMAIN ); ?></h4>
                 <div class="notice-images-wrapper">
+					<p><?php esc_html_e('Use "--" separator in folder name for Chapter Name and Extend Name. For example: "Chapter 1 -- Other Name"');?></p>
                     <img src="<?php echo esc_url( WP_MANGA_URI . 'assets/images/sample-zip-multi-chapters-no-volume.png' ); ?>">
                     <img src="<?php echo esc_url( WP_MANGA_URI . 'assets/images/sample-zip-multi-chapters-volumes.png' ); ?>">
                 </div>

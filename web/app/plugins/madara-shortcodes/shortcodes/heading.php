@@ -14,7 +14,7 @@
 		 *
 		 * @return string
 		 */
-		public function renderShortcode( $atts, $content ) {
+		public function renderShortcode( $atts, $content = '' ) {
 			$id     = isset( $atts['id'] ) ? $atts['id'] : 'c-heading-' . rand( 0, 999 );
 			$icon   = isset( $atts['icon'] ) ? $atts['icon'] : '';
 			$style  = isset( $atts['style'] ) ? $atts['style'] : 1;
@@ -212,3 +212,18 @@
 			) );
 		}
 	}
+		
+	function wp_manga_gutenberg_heading_block() {
+		wp_register_script(
+			'wp_manga_gutenberg_heading_block',
+			plugins_url( 'gutenberg/heading.js', __FILE__ ),
+			array( 'wp-blocks', 'wp-element' )
+		);
+
+		if(function_exists('register_block_type')){
+		register_block_type( 'wp-manga/gutenberg-heading-block', array(
+			'editor_script' => 'wp_manga_gutenberg_heading_block',
+		) );
+		}
+	}
+	add_action( 'init', 'wp_manga_gutenberg_heading_block' );

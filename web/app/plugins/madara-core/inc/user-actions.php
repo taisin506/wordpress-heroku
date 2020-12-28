@@ -26,9 +26,14 @@
 
 			global $wp_manga_template;
 
-			$template = $wp_manga_template->load_template( 'user/settings', '', true );
+			$content = '';
+			ob_start();
+			$wp_manga_template->load_template( 'user/settings', '', true );
+			$content = ob_get_contents();
+			ob_end_clean();
+			
 
-			return $template;
+			return $content;
 
 		}
 
@@ -67,7 +72,7 @@
 
 		}
 
-		function get_user_section( $size = 50 ) {
+		function get_user_section( $size = 50, $echo = false ) {
 
 			global $wp_manga_setting, $wp;
 
@@ -93,10 +98,14 @@
 
 			if ( ! empty( $notify_num ) ) {
 				$html .= '<div class="c-user_notify">' . $notify_num . '</div>';
-				$html .= '</div>';
 			}
+			
+			$html .= '</div>';
 
 			$html .= '<ul class="c-user_menu">';
+			
+			$user_menu .= apply_filters('wp_manga_user_menu_before_items', '');
+			
 			if ( ! empty( $notify_num ) && ! empty( $link ) ) {
 				$user_menu .= '<li><a href="' . esc_url( "{$link}?tab=bookmark" ) . '">' . esc_html__( 'New Chapter', WP_MANGA_TEXTDOMAIN ) . ' (' . $notify_num . ')</a></li>';
 			}
@@ -111,6 +120,8 @@
 						<a href="' . esc_url( $link ) . '">' . esc_html__( 'User Settings', WP_MANGA_TEXTDOMAIN ) . '</a>
 					</li>';
 			}
+			
+			$user_menu .= apply_filters('wp_manga_user_menu_after_items', '');
 
 			$user_menu .= '
                 <li>
@@ -124,12 +135,15 @@
 			$html .= '</div>';
 			$html .= '</div>';
 
-			return apply_filters( 'madara_user_profile', $html, $size );
+			if($echo) {
+				echo apply_filters( 'madara_user_profile', $html, $size );
+			} else {
+				return apply_filters( 'madara_user_profile', $html, $size );
+			}
 
 		}
 
 		function get_user_menu_items() {
-
 			if ( has_nav_menu( 'user_menu' ) ) {
 
 				$output = '';
@@ -141,7 +155,7 @@
 				preg_match_all( '/<li(.+)<\/li>/', $output, $matches );
 
 				if ( ! empty( $matches[0] ) ) {
-					return $matches[0];
+					return apply_filters('wp_manga_user_menu_items', $matches[0]);
 				}
 
 			}
@@ -156,7 +170,12 @@
 
 			$user_page = $wp_manga_setting->get_manga_option( 'user_page', null );
 
-			return get_the_permalink( $user_page );
+			if(function_exists('pll_get_post')){
+				return get_the_permalink( pll_get_post($user_page) );
+			}
+			else {
+				return get_the_permalink( $user_page );
+			}
 		}
 
 		function get_user_tab_url( $tab ) {
@@ -233,8 +252,8 @@
 				return count( isset($manga['unread_c']) ? $manga['unread_c'] : array() );
 
 			} else {
-
-				$mangas = array_column( $user_bookmarks, 'unread_c' );
+				$col = 'unread_c';
+				$mangas = array_map(function($element) use($col ){return $element[$col ];}, $user_bookmarks);
 
 				$total = 0;
 				foreach ( $mangas as $manga ) {
@@ -251,8 +270,8 @@
 			if ( ! is_array( $bookmarks ) ) {
 				return false;
 			}
-
-			$ids = array_column( $bookmarks, 'id' );
+			$col = 'id';
+			$ids = array_map(function($element) use($col ){return $element[$col ];}, $bookmarks);
 
 			if ( ! is_array( $ids ) ) {
 				return false;
@@ -294,17 +313,27 @@
 			}
 
 			$cur_notifications = get_transient( '_wp_manga_chapter_notifications' );
+			
+			global $wp_manga_setting;
+			$max_bookmark_count = $wp_manga_setting->get_manga_option( 'user_bookmark_max', 30 );
 
 			foreach ( $users_bookmarked as $user_id ) {
 
 				// All manga that user bookmarked
 				$user_bookmark = get_user_meta( $user_id, '_wp_manga_bookmark', true );
-
+				
+				if(!is_array($user_bookmark)) $user_bookmark = array();
+				
+				// only store $max_bookmark_count latest item in users_bookmarked;
+				if(count($user_bookmark) > $max_bookmark_count){
+					$user_bookmark = array_slice($user_bookmark, count($user_bookmark) - $max_bookmark_count);
+				}
+				
 				$index = $this->get_manga_bookmark_index( $post_id, $user_bookmark );
 
 				if ( $index === false || empty( $user_bookmark[ $index ] ) ) {
 					continue;
-				}
+				}				
 
 				// This bookmark
 				if ( ! is_array( $user_bookmark[ $index ]['unread_c'] ) ) {
@@ -312,17 +341,41 @@
 				} else {
 					$user_bookmark[ $index ]['unread_c'][] = $chapter_id;
 				}
+				
+				if(count($user_bookmark[ $index ]['unread_c']) > 20){
+				    // reduce number of unread chapters, so the $user_bookmark is not big
+					$temp = array_slice($user_bookmark[$index]['unread_c'], count($user_bookmark[ $index ]['unread_c']) - 20);
+					$user_bookmark[ $index ]['unread_c'] = $temp;
+				}
 
 				$resp = update_user_meta( $user_id, '_wp_manga_bookmark', $user_bookmark );
 
 				if ( $resp && $is_webpush_enable ) {
+					if(empty($cur_notifications)) {
+						
+						$cur_notifications = array();
+						
+					}
+					
+					if(!isset($cur_notifications[ $post_id ])) {
+						
+						$cur_notifications[ $post_id ] = array();
+						
+					}
+					
+					if(!isset($cur_notifications[ $post_id ][ $chapter_id ])) {
+						
+						$cur_notifications[ $post_id ][ $chapter_id ] = array();
+						
+					}
+					
 					$cur_notifications[ $post_id ][ $chapter_id ][] = $user_id;
 				}
 
 			}
 
 			if ( $is_webpush_enable ) {
-				set_transient( '_wp_manga_chapter_notifications', $cur_notifications );
+				set_transient( '_wp_manga_chapter_notifications', $cur_notifications, 24 * 60 * 60 );
 			}
 
 		}
@@ -387,7 +440,7 @@
 				}
 			}
 
-			return set_transient( '_wp_manga_chapter_notifications', $notifications );
+			return set_transient( '_wp_manga_chapter_notifications', $notifications, 24 * 60 * 60 );
 
 		}
 
@@ -407,7 +460,7 @@
 			$chapter_name = $wp_manga_functions->parse_chapter_full_name( $chapter );
 
 			if ( empty( $chapter ) ) {
-				return new WP_Error( '404', 'Chapter not found' );
+				return new WP_Error( '404', esc_html__('Chapter not found', WP_MANGA_TEXTDOMAIN) );
 			}
 
 			$content = str_replace( '%manga%', $manga_name, $content );
@@ -421,7 +474,8 @@
 			$notif_content = OneSignalUtils::decode_entities( $content );
 
 			// Url
-			$url = $wp_manga_functions->build_chapter_url( $post_id, $chapter['chapter_slug'], 'paged' );
+			$page_style = apply_filters('wp_manga_default_notification_chapter_reading_style', 'paged');
+			$url = $wp_manga_functions->build_chapter_url( $post_id, $chapter['chapter_slug'], $page_style );
 
 			// Title
 			$os_settings = OneSignal::get_onesignal_settings();
@@ -596,7 +650,6 @@
 
 			if ( ! empty( $user_bookmarks[ $index ]['unread_c'] ) && is_array( $user_bookmarks[ $index ]['unread_c'] ) ) {
 				foreach ( $user_bookmarks[ $index ]['unread_c'] as $c_index => $chap ) {
-					var_dump( $chap );
 					if ( $chap == $history['c'] ) {
 						unset( $user_bookmarks[ $index ]['unread_c'][ $c_index ] );
 					}

@@ -4,7 +4,7 @@
 	Plugin Name: Madara - Shortcodes
 	Description: Enable shortcodes for Madara theme
 	Plugin URI: http://www.mangabooth.com/
-	Version: 1.5.0.1
+	Version: 1.5.4.6
 	Author: MangaBooth
 	Author URI: https://themeforest.net/user/wpstylish
 	License: Commercial
@@ -29,7 +29,7 @@
 		define( 'CT_SHORTCODE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 	}
 	if ( ! defined( 'CT_SHORTCODE_VERSION' ) ) {
-		define( 'CT_SHORTCODE_VERSION', '1.4.1' );
+		define( 'CT_SHORTCODE_VERSION', '1.5.2.1' );
 	}
 	if ( ! function_exists( 'sc_get_plugin_url' ) ) {
 		function sc_get_plugin_url() {

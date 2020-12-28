@@ -4,7 +4,8 @@
 		array(
 			'name'     => 'Option Tree',
 			'slug'     => 'option-tree',
-			'required' => true
+			'required' => true,
+			'version' => '2.7.3.1'
 		),
 
 		array(
@@ -12,7 +13,7 @@
 			'slug'     => 'madara-shortcodes',
 			'source'   => get_template_directory() . '/app/plugins/packages/madara-shortcodes.zip',
 			'required' => true,
-			'version'  => '1.5.0.1'
+			'version'  => '1.5.4.6'
 		),
 
 		array(
@@ -20,7 +21,7 @@
 			'slug'     => 'madara-core',
 			'source'   => get_template_directory() . '/app/plugins/packages/madara-core.zip',
 			'required' => true,
-			'version'  => '1.5.1.2'
+			'version'  => '1.6.5'
 		),
 
 		array(

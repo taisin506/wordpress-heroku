@@ -25,132 +25,14 @@
 	$s_artist  = isset( $_GET['artist'] ) ? $_GET['artist'] : '';
 	$s_release = isset( $_GET['release'] ) ? $_GET['release'] : '';
 	$s_status  = isset( $_GET['status'] ) ? $_GET['status'] : array();
+	$s_adult = isset( $_GET['adult'] ) ? $_GET['adult'] : '';
+	$s_genre_condition = isset( $_GET['op'] ) ? $_GET['op'] : '';
 
-	$s_orderby = isset( $_GET['m_orderby'] ) ? $_GET['m_orderby'] : 'latest';
+	$s_orderby = isset( $_GET['m_orderby'] ) ? $_GET['m_orderby'] : '';
 	$s_paged   = get_query_var( 'paged' ) ? get_query_var( 'paged' ) : 1;
-
-	$s_args = array(
-		's'        => $s,
-		'orderby'  => $s_orderby,
-		'paged'    => $s_paged,
-		'template' => 'search'
-	);
-
-	if ( ! empty( $s_status ) ) {
-		$s_args['meta_query'] = array(
-			array(
-				'key'     => '_wp_manga_status',
-				'value'   => $s_status,
-				'compare' => 'IN'
-			),
-		);
-	}
-
-	$tax_query = array();
-
-	if ( ! empty( $s_genre ) ) {
-		$tax_args = array(
-			'taxonomy' => 'wp-manga-genre',
-			'slug'     => $s_genre
-		);
-
-		$queried_genre = new WP_Term_Query( $tax_args );
-		$genres        = array();
-
-		if ( ! empty( $queried_genre->get_terms() ) ) {
-			foreach ( $queried_genre->get_terms() as $genre ) {
-				$genres[] = $genre->term_id;
-			}
-		}
-
-		if ( ! empty( $genres ) ) {
-			$tax_query[] = array(
-				'taxonomy' => 'wp-manga-genre',
-				'field'    => 'term_id',
-				'terms'    => $genres
-			);
-		}
-	}
-
-	if ( ! empty( $s_author ) ) {
-		$tax_args = array(
-			'taxonomy' => 'wp-manga-author',
-			'search'   => $s_author
-		);
-
-		$queried_author = new WP_Term_Query( $tax_args );
-		$authors        = array();
-
-		if ( ! empty( $queried_author->get_terms() ) ) {
-			foreach ( $queried_author->get_terms() as $author_term ) {
-				$authors[] = $author_term->term_id;
-			}
-		}
-
-		if ( ! empty( $s_author ) ) {
-			$tax_query[] = array(
-				'taxonomy' => 'wp-manga-author',
-				'field'    => 'term_id',
-				'terms'    => $authors
-			);
-		}
-	}
-
-	if ( ! empty( $s_artist ) ) {
-		$tax_args = array(
-			'taxonomy' => 'wp-manga-artist',
-			'search'   => $s_artist
-		);
-
-		$queried_artist = new WP_Term_Query( $tax_args );
-		$artists        = array();
-
-		if ( ! empty( $queried_artist->get_terms() ) ) {
-			foreach ( $queried_artist->get_terms() as $artist ) {
-				$artists[] = $artist->term_id;
-			}
-		}
-
-		if ( ! empty( $s_artist ) ) {
-			$tax_query[] = array(
-				'taxonomy' => 'wp-manga-artist',
-				'field'    => 'term_id',
-				'terms'    => $artists
-			);
-		}
-	}
-
-	if ( ! empty( $s_release ) ) {
-		$tax_args = array(
-			'taxonomy' => 'wp-manga-release',
-			'search'   => $s_release,
-		);
-
-		$queried_release = new WP_Term_Query( $tax_args );
-		$releases        = array();
-
-		if ( ! empty( $queried_release->get_terms() ) ) {
-			foreach ( $queried_release->get_terms() as $release ) {
-				$releases[] = $release->term_id;
-			}
-		}
-
-		if ( ! empty( $s_release ) ) {
-			$tax_query = array(
-				'taxonomy' => 'wp-manga-release',
-				'field'    => 'term_id',
-				'terms'    => $releases
-			);
-		}
-	}
-
-	if ( ! empty( $tax_query ) ) {
-		$s_args['tax_query'] = array(
-			'relation' => 'OR',
-			$tax_query
-		);
-	}
-
+	
+	$s_args = madara_get_search_args();
+	
 	$s_query = madara_manga_query( $s_args );
 
 	$search_header_background = madara_output_background_options( 'search_header_background' );
@@ -163,9 +45,18 @@
 			<?php get_template_part( 'madara-core/manga', 'breadcrumb' ); ?>
 
             <div class="search-content">
-                <form role="search" method="get" class="search-form">
-                    <label> <span class="screen-reader-text"><?php esc_html_e( 'Search for:', 'madara' ); ?></span>
-                        <input type="search" class="search-field" placeholder="<?php esc_html_e( 'Search...', 'madara' ); ?>" value="<?php echo esc_attr( $s ); ?>" name="s">
+                <form role="search" method="get" class="search-form manga-search-form <?php echo ($madara_ajax_search == 'on' ? 'ajax' : '');?>" action="<?php echo home_url('/');?>">
+						<span class="screen-reader-text"><?php esc_html_e( 'Search for:', 'madara' ); ?></span>
+                        <input type="text" class="search-field manga-search-field" placeholder="<?php esc_html_e( 'Search...', 'madara' ); ?>" value="<?php echo esc_attr( stripcslashes( $s )); ?>" name="s">
+						<input type="submit" class="search-submit" value="<?php esc_html_e( 'Search', 'madara' ); ?>">
+						<div class="loader-inner line-scale">
+                                <div></div>
+                                <div></div>
+                                <div></div>
+                                <div></div>
+                                <div></div>
+                        </div>
+						<i class="icon ion-md-search"></i>	
                         <input type="hidden" name="post_type" value="wp-manga">
                         <script>
 							jQuery(document).ready(function ($) {
@@ -180,15 +71,13 @@
 								});
 							});
                         </script>
-                    </label>
-                    <input type="submit" class="search-submit" value="<?php esc_html_e( 'Search', 'madara' ); ?>">
                 </form>
                 <a class="btn-search-adv collapsed" data-toggle="collapse" data-target="#search-advanced"><?php esc_html_e( 'Advanced', 'madara' ); ?>
                     <span class="icon-search-adv"></span></a>
             </div>
             <div class="collapse" id="search-advanced">
-                <form action="" method="get" role="form" class="search-advanced-form">
-                    <input type="hidden" name="s" id="adv-s" value="">
+                <form action="<?php echo home_url('/');?>" method="get" role="form" class="search-advanced-form">
+                    <input type="hidden" name="s" id="adv-s" value="<?php echo esc_attr($s);?>">
                     <input type="hidden" name="post_type" value="wp-manga">
                     <!-- Manga Genres -->
                     <div class="form-group checkbox-group row">
@@ -214,7 +103,15 @@
 						?>
 
                     </div>
-                    <!-- Manga Author -->
+					<!-- Genre Condition -->
+                    <div class="form-group">
+                        <span><?php esc_html_e( 'Genres condition', 'madara' ); ?></span>
+                        <select name="op" class="form-control">
+							<option value="" <?php selected($s_genre_condition, '');?>><?php esc_html_e('OR (having one of selected genres)', 'madara');?></option>
+							<option value="1" <?php selected($s_genre_condition, 1);?>><?php esc_html_e('AND (having all selected genres)', 'madara');?></option>
+						</select>
+                    </div>
+					<!-- Manga Author -->
                     <div class="form-group">
                         <span><?php esc_html_e( 'Author', 'madara' ); ?></span>
                         <input type="text" class="form-control" name="author" placeholder="<?php esc_attr_e( 'Author', 'madara' ) ?>" value="<?php echo esc_attr( $s_author ); ?>">
@@ -228,6 +125,15 @@
                     <div class="form-group">
                         <span><?php esc_html_e( 'Year of Released', 'madara' ); ?></span>
                         <input type="text" class="form-control" name="release" placeholder="<?php esc_attr_e( 'Year', 'madara' ); ?>" value="<?php echo esc_attr( $s_release ); ?>">
+                    </div>
+					<!-- Manga Adult Content -->
+                    <div class="form-group">
+                        <span><?php esc_html_e( 'Adult content', 'madara' ); ?></span>
+						<select name="adult" class="form-control">
+							<option value="" <?php selected($s_adult, '');?>><?php esc_html_e('All', 'madara');?></option>
+							<option value="0" <?php selected($s_adult, 0);?>><?php esc_html_e('None adult content', 'madara');?></option>
+							<option value="1" <?php selected($s_adult, 1);?>><?php esc_html_e('Only adult content', 'madara');?></option>
+						</select>
                     </div>
                     <!-- Manga Status -->
                     <div class="form-group">
@@ -276,9 +182,9 @@
                                     <div class="search-wrap">
                                         <div class="tab-wrap">
                                             <div class="c-blog__heading style-2 font-heading">
-                                                <h4>
-                                                    <i class="<?php madara_default_heading_icon(); ?>"></i> <?php echo sprintf( _n( '%s result', '%s results', $s_query->found_posts, 'madara' ), $s_query->found_posts ); ?>
-                                                </h4>
+                                                <h1 class="h4">
+                                                    <i class="<?php madara_default_heading_icon(); ?>"></i> <?php echo sprintf( _n( '%s result for "%s"', '%s results for "%s"', $s_query->found_posts, 'madara' ), $s_query->found_posts, $s ); ?>
+                                                </h1>
 												<?php get_template_part( 'madara-core/manga-filter' ); ?>
                                             </div>
                                         </div>
@@ -286,22 +192,21 @@
                                         <div class="tab-content-wrap">
                                             <div role="tabpanel" class="c-tabs-item">
 													<?php
-
+													
 														while ( $s_query->have_posts() ) {
 
 															$s_query->the_post();
-
 															get_template_part( 'madara-core/content/content', 'search' );
 
-														}
-
+														}														
+														
 														wp_reset_postdata();
 													?>
-												<?php
-													$madara_pagination = new App\Views\ParsePagination();
-													$madara_pagination->renderPageNavigation( '.c-tabs-item', 'madara-core/content/content-search', $s_query );
-												?>
                                             </div>
+											<?php
+											$madara_pagination = new App\Views\ParsePagination();
+													$madara_pagination->renderPageNavigation( '.c-tabs-item', 'madara-core/content/content-search', $s_query );
+													?>
                                         </div>
                                     </div>
 									<?php

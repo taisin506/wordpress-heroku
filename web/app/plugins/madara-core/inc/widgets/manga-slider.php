@@ -25,7 +25,9 @@
 			$order          = ! empty( $instance['order'] ) ? $instance['order'] : 'desc';
 			$style          = ! empty( $instance['style'] ) ? $instance['style'] : 'style-1';
 			$manga_type          = ! empty( $instance['manga_type'] ) ? $instance['manga_type'] : '';
-
+			$manga_tags          = ! empty( $instance['manga_tags'] ) ? $instance['manga_tags'] : '';
+			$autoplay          = ! empty( $instance['autoplay'] ) ? $instance['autoplay'] : 0;
+			
 			$order_by_list = array(
 				'latest'    => esc_html__( 'Latest', WP_MANGA_TEXTDOMAIN ),
 				'alphabet'  => esc_html__( 'Alphabet', WP_MANGA_TEXTDOMAIN ),
@@ -86,24 +88,35 @@
                 <label for="<?php echo $this->get_field_id( 'genre' ); ?>"> <?php echo esc_html__( 'Genre', WP_MANGA_TEXTDOMAIN ); ?>
                     : </label>
                 <input class="widefat" type="text" id="<?php echo $this->get_field_id( 'genre' ); ?>" name="<?php echo $this->get_field_name( 'genre' ); ?>" value="<?php echo esc_attr( $genre ); ?>">
+				<span class="description"><?php echo esc_html__('Slugs of manga genres, separated by a comma', WP_MANGA_TEXTDOMAIN);?></span>
             </p>
 
             <p>
                 <label for="<?php echo $this->get_field_id( 'author' ); ?>"> <?php echo esc_html__( 'Author', WP_MANGA_TEXTDOMAIN ); ?>
                     : </label>
                 <input class="widefat" type="text" id="<?php echo $this->get_field_id( 'author' ); ?>" name="<?php echo $this->get_field_name( 'author' ); ?>" value="<?php echo esc_attr( $author ); ?>">
+				<span class="description"><?php echo esc_html__('Slugs of manga authors, separated by a comma', WP_MANGA_TEXTDOMAIN);?></span>
             </p>
 
             <p>
                 <label for="<?php echo $this->get_field_id( 'artist' ); ?>"> <?php echo esc_html__( 'Artist', WP_MANGA_TEXTDOMAIN ); ?>
                     : </label>
                 <input class="widefat" type="text" id="<?php echo $this->get_field_id( 'artist' ); ?>" name="<?php echo $this->get_field_name( 'artist' ); ?>" value="<?php echo esc_attr( $artist ); ?>">
+				<span class="description"><?php echo esc_html__('Slugs of manga artists, separated by a comma', WP_MANGA_TEXTDOMAIN);?></span>
             </p>
 
             <p>
                 <label for="<?php echo $this->get_field_id( 'release' ); ?>"> <?php echo esc_html__( 'Release Year', WP_MANGA_TEXTDOMAIN ); ?>
                     : </label>
                 <input class="widefat" type="text" id="<?php echo $this->get_field_id( 'release' ); ?>" name="<?php echo $this->get_field_name( 'release' ); ?>" value="<?php echo esc_attr( $release ); ?>">
+				<span class="description"><?php echo esc_html__('Slugs of manga releases, separated by a comma', WP_MANGA_TEXTDOMAIN);?></span>
+            </p>
+			
+			<p>
+                <label for="<?php echo $this->get_field_id( 'manga_tags' ); ?>"> <?php echo esc_html__( 'Manga Tags', WP_MANGA_TEXTDOMAIN ); ?>
+                    : </label>
+                <input class="widefat" type="text" id="<?php echo $this->get_field_id( 'manga_tags' ); ?>" name="<?php echo $this->get_field_name( 'manga_tags' ); ?>" value="<?php echo esc_attr( $manga_tags ); ?>">
+				<span class="description"><?php echo esc_html__('Slugs of manga tags, separated by a comma', WP_MANGA_TEXTDOMAIN);?></span>
             </p>
 
             <p>
@@ -150,6 +163,19 @@
                 </select>
             </p>
 			<?php
+			$autoplay_1 = $autoplay == 1 ? 'selected="selected"' : '';
+			$autoplay_0 = $autoplay == 0 ? 'selected="selected"' : '';
+			?>
+            <p>
+                <label for="<?php echo $this->get_field_id( 'autoplay' ); ?>"><?php echo esc_html__( 'Autoplay', WP_MANGA_TEXTDOMAIN ); ?>
+                    : </label>
+                <select class="widefat" id="<?php echo $this->get_field_id( 'autoplay' ); ?>" name="<?php echo $this->get_field_name( 'autoplay' ); ?>">
+
+                    <option value="1" <?php echo $autoplay_1; ?>><?php echo esc_html__( 'Yes', WP_MANGA_TEXTDOMAIN ); ?></option>
+                    <option value="0" <?php echo $autoplay_0; ?>><?php echo esc_html__( 'No', WP_MANGA_TEXTDOMAIN ); ?></option>
+                </select>
+            </p>
+			<?php
 		}
 
 		function update( $new_instance, $old_instance ) {
@@ -159,6 +185,7 @@
 			$instance['number_of_post'] = strip_tags( $new_instance['number_of_post'] );
 			$instance['number_to_show'] = strip_tags( $new_instance['number_to_show'] );
 			$instance['genre']          = strip_tags( $new_instance['genre'] );
+			$instance['manga_tags']          = strip_tags( $new_instance['manga_tags'] );
 			$instance['author']         = strip_tags( $new_instance['author'] );
 			$instance['artist']         = strip_tags( $new_instance['artist'] );
 			$instance['release']        = strip_tags( $new_instance['release'] );
@@ -166,6 +193,7 @@
 			$instance['manga_type']       = strip_tags( $new_instance['manga_type'] );
 			$instance['order']          = strip_tags( $new_instance['order'] );
 			$instance['style']          = strip_tags( $new_instance['style'] );
+			$instance['autoplay']          = strip_tags( $new_instance['autoplay'] );
 
 			return $instance;
 		}
@@ -186,6 +214,7 @@
 			$order_by       = ! empty( $instance['order_by'] ) ? $instance['order_by'] : '';
 			$order          = ! empty( $instance['order'] ) ? $instance['order'] : '';
 			$style          = ! empty( $instance['style'] ) ? $instance['style'] : 'style-1';
+			$autoplay          = ! empty( $instance['autoplay'] ) ? $instance['autoplay'] : 0;
 			
 			$manga_type          = ! empty( $instance['manga_type'] ) ? $instance['manga_type'] : '';
 
@@ -213,7 +242,20 @@
 				foreach ( $genre_array as $g ) {
 					$query_args['tax_query'][] = array(
 						'taxonomy' => 'wp-manga-genre',
-						'terms'    => $g,
+						'terms'    => trim($g),
+						'field'    => 'slug',
+					);
+				}
+			}
+			
+			$manga_tags = ! empty( $instance['manga_tags'] ) ? $instance['manga_tags'] : '';
+			if ( $manga_tags && '' != $manga_tags ) {
+				$query_args['tax_query']['relation'] = 'OR';
+				$manga_tags_arr                         = explode( ',', $manga_tags );
+				foreach ( $manga_tags_arr as $g ) {
+					$query_args['tax_query'][] = array(
+						'taxonomy' => 'wp-manga-tag',
+						'terms'    => trim($g),
 						'field'    => 'slug',
 					);
 				}
@@ -226,7 +268,7 @@
 				foreach ( $author_array as $au ) {
 					$query_args['tax_query'][] = array(
 						'taxonomy' => 'wp-manga-author',
-						'terms'    => $au,
+						'terms'    => trim($au),
 						'field'    => 'slug',
 					);
 				}
@@ -239,7 +281,7 @@
 				foreach ( $artist_array as $ar ) {
 					$query_args['tax_query'][] = array(
 						'taxonomy' => 'wp-manga-artist',
-						'terms'    => $ar,
+						'terms'    => trim($ar),
 						'field'    => 'slug',
 					);
 				}
@@ -279,7 +321,7 @@
 
 			if ( $title != '' ) { ?><?php echo $before_title . $title . $after_title; ?><?php } ?>
 
-            <div class="manga-slider <?php echo esc_attr( $classes ); ?>" data-style="<?php echo esc_attr( $data_style ); ?>" data-count="<?php echo esc_attr( $number_to_show ); ?>">
+            <div class="manga-slider <?php echo esc_attr( $classes ); ?>" data-autoplay="<?php echo esc_attr($autoplay);?>" data-style="<?php echo esc_attr( $data_style ); ?>" data-count="<?php echo esc_attr( $number_to_show ); ?>">
                 <div class="slider__container" role="toolbar">
 					<?php while ( $queried_posts->have_posts() ) {
 						$queried_posts->the_post();

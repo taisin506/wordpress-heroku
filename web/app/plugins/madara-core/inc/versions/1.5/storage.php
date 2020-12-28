@@ -464,7 +464,7 @@
 					$data = $wp_manga_amazon_upload->amazon_upload( $upload );
 					break;
 				default:
-					# code...
+					
 					break;
 			}
 
@@ -1072,9 +1072,9 @@
 				$current_paths = get_transient( 'path_to_clean_' . $uniqid );
 
 				if ( $current_paths == false ) {
-					set_transient( 'path_to_clean_' . $uniqid, array( $extract ) );
+					set_transient( 'path_to_clean_' . $uniqid, array( $extract ), 24 * 60 * 60 );
 				} else {
-					set_transient( 'path_to_clean_' . $uniqid, array_merge( $current_paths, array( $extract ) ) );
+					set_transient( 'path_to_clean_' . $uniqid, array_merge( $current_paths, array( $extract ) ), 24 * 60 * 60 );
 				}
 			}
 

@@ -53,7 +53,7 @@
 				$wp_manga_settings = $_POST['wp_manga_settings'];
 
 				$wp_manga_settings['manga_slug'] = urldecode( sanitize_title( $_POST['wp_manga_settings']['manga_slug'] ) );
-
+				
 				$wp_manga_settings['manga_genres_slug'] = urldecode( sanitize_title( $_POST['wp_manga_settings']['manga_genres_slug'] ) );
 				
 				$wp_manga_settings['manga_author_slug'] = urldecode( sanitize_title( $_POST['wp_manga_settings']['manga_author_slug'] ) );
@@ -71,6 +71,8 @@
 				$wp_manga_settings['loading_fontawesome'] = isset( $wp_manga_settings['loading_fontawesome'] ) ? $wp_manga_settings['loading_fontawesome'] : '0';
 
 				$wp_manga_settings['loading_ionicon'] = isset( $wp_manga_settings['loading_ionicon'] ) ? $wp_manga_settings['loading_ionicon'] : '0';
+				
+				$wp_manga_settings['admin_show_chapter_type'] = isset( $wp_manga_settings['admin_show_chapter_type'] ) ? $wp_manga_settings['admin_show_chapter_type'] : '0';
 
 				$wp_manga_settings['admin_hide_bar'] = isset( $wp_manga_settings['admin_hide_bar'] ) ? $wp_manga_settings['admin_hide_bar'] : '0';
 
@@ -83,12 +85,36 @@
 				$wp_manga_settings['breadcrumb_all_manga_link'] = isset( $wp_manga_settings['breadcrumb_all_manga_link'] ) ? $wp_manga_settings['breadcrumb_all_manga_link'] : '0';
 				
 				$wp_manga_settings['breadcrumb_first_genre_link'] = isset( $wp_manga_settings['breadcrumb_first_genre_link'] ) ? $wp_manga_settings['breadcrumb_first_genre_link'] : '0';
+				
+				$wp_manga_settings['navigation_manga_info'] = isset( $wp_manga_settings['navigation_manga_info'] ) ? $wp_manga_settings['navigation_manga_info'] : '0';
+				
+				$wp_manga_settings['guest_reading_history'] = isset( $wp_manga_settings['guest_reading_history'] ) ? $wp_manga_settings['guest_reading_history'] : '0';
+				
+				$wp_manga_settings['user_can_upload_avatar'] = isset( $wp_manga_settings['user_can_upload_avatar'] ) ? $wp_manga_settings['user_can_upload_avatar'] : '0';
 
 				$wp_manga_settings['single_manga_seo'] = isset( $wp_manga_settings['single_manga_seo'] ) ? $wp_manga_settings['single_manga_seo'] : '0';
 
 				$wp_manga_settings['related_manga'] = isset( $wp_manga_settings['related_manga'] ) ? $wp_manga_settings['related_manga'] : '0';
 
 				$wp_manga_settings['default_comment'] = isset( $wp_manga_settings['default_comment'] ) ? $wp_manga_settings['default_comment'] : 'wp';
+				
+				$wp_manga_settings['default_video_server'] = isset($wp_manga_settings['default_video_server']) ? $wp_manga_settings['default_video_server'] : '';
+				
+				$wp_manga_settings['reading_style_selection'] = isset($wp_manga_settings['reading_style_selection']) ? $wp_manga_settings['reading_style_selection'] : '0';
+				
+				$wp_manga_settings['user_rating'] = isset($wp_manga_settings['user_rating']) ? $wp_manga_settings['user_rating'] : 0;
+                
+                $wp_manga_settings['guest_rating'] = isset($wp_manga_settings['guest_rating']) ? $wp_manga_settings['guest_rating'] : 0;
+                
+                $wp_manga_settings['manga_view'] = isset($wp_manga_settings['manga_view']) ? $wp_manga_settings['manga_view'] : 0;
+				
+				$wp_manga_settings['user_bookmark'] = isset($wp_manga_settings['user_bookmark']) ? $wp_manga_settings['user_bookmark'] : 0;
+				
+				$wp_manga_settings['user_bookmark_max'] = isset($wp_manga_settings['user_bookmark_max']) ? intval($wp_manga_settings['user_bookmark_max']) : 30;
+				
+				$wp_manga_settings['enable_comment'] = isset( $wp_manga_settings['enable_comment'] ) ? $wp_manga_settings['enable_comment'] : '0';
+				
+				$wp_manga_settings['click_to_scroll'] = isset( $wp_manga_settings['click_to_scroll'] ) ? $wp_manga_settings['click_to_scroll'] : '0';
 
 				update_option( 'wp_manga_settings', $wp_manga_settings );
 
@@ -112,7 +138,10 @@
 
 			$settings = get_option( 'wp_manga_settings', array() );
 
-			if ( isset( $settings[ $option ] ) ) {
+			if ( 
+				! empty( $settings[ $option ] ) 
+				|| ( isset( $settings[ $option ] ) && ($settings[ $option ] === '0' || $settings[ $option ] === 0))  //some settings have default value is 0
+			) {
 				return $settings[ $option ];
 			}
 
@@ -138,9 +167,10 @@
 
 			?>
 
-			<?php do_action( 'madara_before_manga_discussion' ); ?>
-
-            <div id="manga-discission" class="c-blog__heading style-2 font-heading">
+			<?php do_action( 'madara_before_manga_discussion' ); // will be obsolete in Madara 2.0 ?>
+			<?php do_action( 'wp_manga_before_manga_discussion' ); ?>
+			<?php if(!function_exists('wpDiscuz')){?>
+            <div id="manga-discussion" class="c-blog__heading style-2 font-heading">
                 <i class="ion-ios-star"></i>
                 <h4> <?php esc_html_e( 'MANGA DISCUSSION', WP_MANGA_TEXTDOMAIN ); ?> </h4>
 
@@ -167,9 +197,9 @@
 						});
                     </script>
 				<?php } ?>
-
             </div>
-            <div class="manga-discussion wrapper">
+			<?php } ?>
+            <div <?php if(function_exists('wpDiscuz')){?>id="manga-discussion"<?php }?> class="manga-discussion wrapper">
 				<?php if ( $comment_type == 'both' ) { ?>
                     <div id="manga-discussion-local">
 						<?php comments_template(); ?>
@@ -178,15 +208,17 @@
 						<?php
 							do_action( 'dsq_before_comments' );
 							do_action( 'dsq_enqueue_comments_script' );
+							
+							if(file_exists(WP_MANGA_DIR . '/disqus-comment-system/public/partials/disqus-public-display.php'))
 
-							include dirname( WP_MANGA_DIR ) . '/disqus-comment-system/public/partials/disqus-public-display.php';
+								include dirname( WP_MANGA_DIR . '/disqus-comment-system/public/partials/disqus-public-display.php' );
 						?>
                     </div>
 				<?php } else { ?><?php comments_template(); ?><?php } ?>
             </div>
 
-			<?php do_action( 'madara_after_manga_discussion' ); ?>
-
+			<?php do_action( 'madara_after_manga_discussion' ); // will be obsolete in Madara 2.0 ?>
+			<?php do_action( 'wp_manga_after_manga_discussion' ); ?>
 			<?php
 		}
 
@@ -209,6 +241,7 @@
 			return $script_name;
 
 		}
+
 	}
 
 	$GLOBALS['wp_manga_setting'] = new WP_MANGA_SETTING();

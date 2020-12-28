@@ -12,12 +12,40 @@
 
 			add_action( 'admin_footer', array( $this, 'wp_manga_popup' ) );
 
-			add_action( 'init', array( $this, 'wp_manga_rewrite_rules' ) );
-
 			add_action( 'updated_user_meta', array( $this, 'show_manga_taxonomies' ), 10, 4 );
 
 			add_filter( 'madara_manga_query_filter', array( $this, 'search_c_extend_name' ), 10, 2 );
 			add_filter( 'madara_manga_query_filter', array( $this, 'search_manga_alt_name' ), 10, 2 );
+			
+			add_filter( 'manage_wp-manga_posts_columns', array($this, 'admin_columns') );
+			add_action( 'manage_wp-manga_posts_custom_column' , array($this, 'admin_columns_value'), 10, 2 );
+		}
+		
+		function admin_columns($columns) {
+			$admin_show_chapter_type = $GLOBALS['wp_manga_setting']->get_manga_option('admin_show_chapter_type', '');
+			
+			if($admin_show_chapter_type){
+				$columns['manga_type'] = __( 'Type', WP_MANGA_TEXTDOMAIN );
+			}
+
+			return $columns;
+		}
+
+		function admin_columns_value( $column, $post_id ) {
+			switch ( $column ) {
+
+				case 'manga_type' :
+					$chapter_type = get_post_meta( $post_id, '_wp_manga_chapter_type', true );
+					echo '<span class="admin-tag chapter-type wp-manga-chapter-type-label ' . $chapter_type . '">';
+					switch($chapter_type){
+						case 'video': echo esc_html__('Drama', WP_MANGA_TEXTDOMAIN);break;
+						case 'text': echo esc_html__('Novel', WP_MANGA_TEXTDOMAIN);break;
+						case 'manga': echo esc_html__('Manga', WP_MANGA_TEXTDOMAIN); break;
+					}
+					echo '</span>';
+					break;
+
+			}
 		}
 
 		function wp_manga() {
@@ -31,7 +59,7 @@
 					'name'               => esc_html__( 'Manga', WP_MANGA_TEXTDOMAIN ),
 					'singular_name'      => esc_html__( 'Manga', WP_MANGA_TEXTDOMAIN ),
 					'menu_name'          => esc_html__( 'Manga', WP_MANGA_TEXTDOMAIN ),
-					'all_items'          => esc_html__( 'All Manga', WP_MANGA_TEXTDOMAIN ),
+					'all_items'          => esc_html__( 'All Mangas', WP_MANGA_TEXTDOMAIN ),
 					'add_new'            => esc_html__( 'Add New', WP_MANGA_TEXTDOMAIN ),
 					'add_new_item'       => esc_html__( 'Add New Manga', WP_MANGA_TEXTDOMAIN ),
 					'edit_item'          => esc_html__( 'Edit Manga', WP_MANGA_TEXTDOMAIN ),
@@ -283,7 +311,7 @@
 			), 'wp-manga', 'side', 'high' );
 		}
 
-		function wp_manga_views( $post ) {
+		function wp_manga_views( $post ) {  
 			$views = get_post_meta( $post->ID, '_wp_manga_views', true );
 
 			if ( $views == false ) {
@@ -296,12 +324,15 @@
 
 		function wp_manga_status( $post ) {
 			$status = get_post_meta( $post->ID, '_wp_manga_status', true );
+			$manga_status = $this->get_manga_status();
+			
 			?>
             <select id="manga-status" name="manga-status">
-                <option value="on-going" <?php selected( 'on-going', $status, true ); ?>><?php esc_attr_e( 'OnGoing' ) ?></option>
-                <option value="end" <?php selected( 'end', $status, true ); ?>><?php esc_attr_e( 'Completed' ) ?></option>
-                <option value="canceled" <?php selected( 'canceled', $status, true ); ?>><?php esc_attr_e( 'Canceled' ) ?></option>
-                <option value="on-hold" <?php selected( 'on-hold', $status, true ); ?>><?php esc_attr_e( 'On Hold' ) ?></option>
+				<?php foreach($manga_status as $prefined_status_key => $prefined_status_value){
+					?>
+					<option value="<?php echo esc_attr($prefined_status_key);?>" <?php selected( $prefined_status_key, $status, true ); ?>><?php esc_html_e($prefined_status_value); ?></option>
+					<?php
+				}?>
             </select>
 			<?php
 		}
@@ -417,10 +448,10 @@
 			<?php
 		}
 
-		function list_all_chapters( $post_id ) {
+		function list_all_chapters( $post_id, $order = '' ) {
 
 			global $wp_manga_functions;
-			$chapters = $wp_manga_functions->get_all_chapters( $post_id );
+			$chapters = $wp_manga_functions->get_all_chapters( $post_id, $order );
 			$output   = $wp_manga_functions->list_chapters_by_volume( $post_id, $chapters, false );
 
 			return $output;
@@ -467,21 +498,6 @@
 
 		}
 
-		function wp_manga_rewrite_rules() {
-
-			$manga_post_type = get_post_type_object( 'wp-manga' );
-			$slug            = $manga_post_type->rewrite['slug'];
-
-			//rewrite endpoint for chapter
-			add_rewrite_endpoint( 'chapter', EP_PERMALINK );
-			add_rewrite_endpoint( 'volume', EP_PERMALINK );
-
-			add_rewrite_rule( "{$slug}/([^/]+)/([^/]+)/([^/]+)/?$", 'index.php?manga-core=$matches[1]&volume=$matches[2]&chapter=$matches[3]', 'top' );
-
-			add_rewrite_rule( "{$slug}/([^/]+)/([^/]+)/?$", 'index.php?manga-core=$matches[1]&chapter=$matches[2]', 'top' );
-
-		}
-
 		//this func keep all manga taxonomies boxes are showed
 		function show_manga_taxonomies( $meta_id, $object_id, $meta_key, $meta_value ) {
 			if ( $meta_key == 'metaboxhidden_wp-manga' && ! empty( $meta_value ) ) {
@@ -501,8 +517,8 @@
 			$chapters = $wp_manga_chapter->get_chapters( array(), $manga_args['s'], 'date' );
 
 			if ( ! empty( $chapters ) ) {
-
-				$post_ids = array_unique( array_merge( array_column( $chapters, 'post_id' ), wp_list_pluck( $manga_query->posts, 'ID' ) ) );
+				$col = 'post_id';
+				$post_ids = array_unique( array_merge( array_map(function($element) use($col ){return $element[$col ];}, $chapters), wp_list_pluck( $manga_query->posts, 'ID' ) ) );
 
 				$search_posts = new WP_Query( array(
 					'post_type' => 'wp-manga',
@@ -567,6 +583,16 @@
 
 			return $query1;
 
+		}
+		
+		public function get_manga_status(){
+			return array(
+				'on-going' => esc_html__( 'OnGoing', WP_MANGA_TEXTDOMAIN ),
+				'end' => esc_html__( 'Completed', WP_MANGA_TEXTDOMAIN ),
+				'canceled' => esc_html__( 'Canceled', WP_MANGA_TEXTDOMAIN ),
+				'on-hold' => esc_html__( 'On Hold', WP_MANGA_TEXTDOMAIN ),
+				'upcoming' => esc_html__( 'Upcoming', WP_MANGA_TEXTDOMAIN )
+				);
 		}
 	}
 

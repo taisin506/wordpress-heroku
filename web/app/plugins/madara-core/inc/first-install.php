@@ -59,9 +59,9 @@ class WP_MANGA_FIRST_INSTALL{
         if( isset( $_GET['wp-manga'] ) && $_GET['wp-manga'] == 'first-install' ) {
 
             wp_enqueue_style( 'manga_first_install_css', WP_MANGA_URI . 'assets/css/first-install.css', array(), '' );
-            wp_enqueue_style( 'manga_bootstrap_css', WP_MANGA_URI . 'assets/css/bootstrap.min.css', array(), '' );
-            wp_enqueue_style( 'manga_fontawesome', WP_MANGA_URI . 'assets/css/font-awesome/css/font-awesome.min.css', array(), '' );
-            wp_enqueue_script( 'manga_bootstrap_js', WP_MANGA_URI . 'assets/js/bootstrap.min.js', array( 'jquery' ), '' );
+            wp_enqueue_style( 'manga_bootstrap_css', WP_MANGA_URI . 'assets/css/bootstrap.min.css', array(), '4.3.1' );
+            wp_enqueue_style( 'manga_fontawesome', WP_MANGA_URI . 'assets/font-awesome/css/font-awesome.min.css', array(), '' );
+            wp_enqueue_script( 'manga_bootstrap_js', WP_MANGA_URI . 'assets/js/bootstrap.min.js', array( 'jquery' ), '4.3.1' );
             wp_enqueue_script( 'manga_first_install_js', WP_MANGA_URI . 'assets/js/first-install.js', array( 'jquery' ), '' );
             wp_localize_script( 'manga_first_install_js', 'manga_ajax_url', array( 'admin_ajax' => get_admin_url( '', 'admin-ajax.php' ) ) );
 

@@ -107,14 +107,23 @@
 								<?php } ?>
 
 								<?php if ( is_manga_reading_page() && class_exists( 'WP_MANGA' ) ) {
-									$chapter_slug = get_query_var( 'chapter' );
+									$this_chapter = function_exists('madara_permalink_reading_chapter') ? madara_permalink_reading_chapter() : false;
+	
+									if(!$this_chapter){
+										 // support Madara Core before 1.6
+										 if($chapter_slug = get_query_var('chapter')){
+											$this_chapter = $wp_manga_functions->get_chapter_by_slug( get_the_ID(), $chapter_slug );
+										 }
+									}
 
-									if ( ! empty( $chapter_slug ) ) {
+									if ( $this_chapter ) {
+										$chapter_slug = $this_chapter['chapter_slug'];
+										
 										$wp_manga_functions = madara_get_global_wp_manga_functions();
 										$wp_manga_chapter   = madara_get_global_wp_manga_chapter();
 										$chapter_json       = $wp_manga_functions->get_chapter( get_the_ID() );
 
-										$chapter_db = $wp_manga_chapter->get_chapter_by_slug( get_the_ID(), $chapter_slug );
+										$chapter_db = $this_chapter;
 
 										$c_name   = isset( $chapter_db['chapter_name'] ) ? $chapter_db['chapter_name'] : '';
 										$c_extend = $wp_manga_functions->filter_extend_name( $chapter_db['chapter_name_extend'] );
@@ -135,6 +144,19 @@
 						<?php if ( is_manga_reading_page() ) { ?>
                             <div class="action-icon">
                                 <ul class="action_list_icon list-inline">
+									<?php 
+									$chapter_type = get_post_meta( get_the_ID(), '_wp_manga_chapter_type', true );
+									if($chapter_type == 'text'){
+									?>
+									<li>
+										<a href="javascript:void(0)" class="btn-text-reading-increase"><i class="icon ion-md-add"></i></a>
+									</li>
+									<li>
+										<a href="javascript:void(0)" class="btn-text-reading-decrease"><i class="icon ion-md-remove"></i></a>
+									</li>
+									<?php
+									}
+									?>
                                     <li>
 										<?php echo madara_get_global_wp_manga_functions()->bookmark_link_e(); ?>
                                     </li>
@@ -159,7 +181,7 @@
                                         <div class="c-blog__heading style-3 font-heading <?php echo esc_attr($manga_archive_genres_collapse == 'on' ? 'active' : ''); ?>">
                                             <h5><?php echo esc_html( $manga_archive_genres_title ); ?></h5>
                                         </div>
-                                        <a class="btn btn-genres ion-arrow-down-b float-right <?php echo esc_attr($manga_archive_genres_collapse == 'on' ? 'active' : ''); ?>"></a>
+                                        <a class="btn btn-genres icon ion-md-arrow-dropdown float-right <?php echo esc_attr($manga_archive_genres_collapse == 'on' ? 'active' : ''); ?>"></a>
                                         <div class="genres__collapse" style="<?php echo esc_attr($manga_archive_genres_collapse == 'on' ? 'display: block' : 'display: none'); ?>">
 											<?php
 

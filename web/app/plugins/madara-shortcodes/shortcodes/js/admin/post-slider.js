@@ -4,7 +4,7 @@
 		editor.addButton('madara_post_slider', {
 			text: '',
 			id: 'madara_shortcode_post_slider',
-			tooltip: 'MangaStream Post Slider',
+			tooltip: 'WP Manga Post Slider',
 			onclick: function () {
 				// Open window
 				var body = [
@@ -99,7 +99,7 @@
 				];
 
 				editor.windowManager.open({
-					title: 'MangaStream Post Slider',
+					title: 'WP Manga - Posts Slider',
 					body: body,
 					onsubmit: function (e) {
 

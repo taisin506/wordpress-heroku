@@ -40,6 +40,43 @@
 
 		return Database::getPosts( $posts_per_page, $order, $page, $orderby, $args );
 	}
+	
+	function madara_starts_with_posts_where( $where, $query ) {
+		global $wpdb;
+
+		$starts_with = get_query_var('starts_with') ? get_query_var('starts_with') : $query->get('starts_with');
+		
+		if ( $starts_with != '' ) {
+			if($starts_with == '-0'){
+				$where .= " AND $wpdb->posts.post_title LIKE '0%'";
+			} else {
+				$where .= " AND $wpdb->posts.post_title LIKE '$starts_with%'";
+			}
+		}
+
+		return $where;
+	}
+	add_filter( 'posts_where', 'madara_starts_with_posts_where', 10, 2 );
+	
+	function manga_listing_alphabeta_bars( $baseurl ) {
+		$start = '';
+		if ( isset($_GET['start']) && $_GET['start'] != '' ) {
+			$start = $_GET['start'];
+		}
+		?>
+		<div id="manga-filte-alphabeta-bar">
+			<a href="<?php echo remove_query_arg('start', $baseurl);?>"><?php echo esc_html__('All', 'madara');?></a>
+		<?php
+		$characters = str_split(apply_filters('madara_manga_title_characters', '0123456789abcdefghijklmnopqrstuvwxyz'));
+		foreach($characters as $c){
+			?>
+			<a title="<?php echo sprintf(esc_html__('Manga starts with %s', 'madara'), $c);?>" class="<?php echo esc_html($c == $start ? 'active':'');?>" href="<?php echo esc_url(add_query_arg('start', $c, $baseurl));?>"><?php echo esc_html($c);?></a>
+			<?php
+		}
+		?>
+		</div>
+		<?php
+	}
 
 	/**
 	 * Adds custom classes to the array of body classes.
@@ -49,6 +86,11 @@
 	 * @return array
 	 */
 	function madara_body_classes( $classes ) {
+		$is_manga_reading_page = false;
+		if( function_exists( 'is_manga_reading_page' ) && is_manga_reading_page() ) {
+			$is_manga_reading_page = true;
+		}
+		
 		$classes[] = 'page';
 
 		$header_layout = Madara::getOption( 'header_style', 1 );
@@ -59,8 +101,10 @@
 			// do nothing
 		} else {
 			$sticky_menu       = Madara::getOption( 'nav_sticky', 1 );
-			$sticky_navgiation = Madara::getOption( 'manga_reading_sticky_navigation', 'on' );
-			if ( $sticky_menu != 0 || $sticky_navgiation == 'on' ) {
+			$sticky_reading_nav = Madara::getOption( 'manga_reading_sticky_navigation', 'on' );
+			$sticky_reading_header = Madara::getOption( 'manga_reading_sticky_header', '' );
+			
+			if ( ($sticky_menu != 0 && !($is_manga_reading_page && $sticky_reading_header == 'off')) || ($is_manga_reading_page && ($sticky_reading_header == 'on')) ) {
 				$classes[] = 'sticky-enabled';
 				$classes[] = 'sticky-style-' . $sticky_menu;
 			}
@@ -71,8 +115,14 @@
 			$classes[] = 'is-sidebar';
 		}
 
-
-		$body_schema           = Madara::getOption( 'body_schema', 'light' );
+		$user_id = get_current_user_id();
+		if($user_id){
+			$body_schema = get_user_meta( $user_id, '_manga_user_site_schema', true);
+		}
+		
+		$body_schema           = (isset($body_schema) && $body_schema != '') ? $body_schema : Madara::getOption( 'body_schema', 'light' );
+		
+		
 		$overwrite_body_schema = isset( $_GET['body_schema'] ) && $_GET['body_schema'] != '' ? $_GET['body_schema'] : '';
 
 		if ( $overwrite_body_schema != '' ) {
@@ -88,21 +138,41 @@
 				$classes[] = 'text-ui-light';
 			}
 		}
+		
+		global $wp_manga_setting;
+			
+		if(!isset($wp_manga_setting)){
+			return $classes;
+		}
 
-		if ( function_exists( 'is_manga_single' ) && is_manga_single() ) {
+		if ( is_manga_single() || is_manga_reading_page() ) {
 			$manga_adult_content = get_post_meta( get_the_ID(), 'manga_adult_content', true );
 			if ( ! empty( $manga_adult_content ) && $manga_adult_content[0] == 'yes' ) {
 				$classes[] = 'adult-content censored';
 			}
 		}
 
-		if ( function_exists( 'is_manga_reading_page' ) && is_manga_reading_page() ) {
-			$manga_reading_navigation_by_pointer = Madara::getOption( 'manga_reading_navigation_by_pointer', 'on' );
-			$manga_reading_style                 = Madara::getOption( 'manga_reading_style', 'paged' );
-			$user_reading_style                  = isset( $_GET['style'] ) ? $_GET['style'] : 'paged';
-			if ( $manga_reading_navigation_by_pointer == 'on' && ( $manga_reading_style == 'paged' || $user_reading_style == 'paged' ) ) {
-				$classes[] = 'manga-reading-paged-style';
-			}
+		if ( $is_manga_reading_page ) {
+			global $wp_manga_functions;
+			
+			$manga_reading_style = isset( $_GET['style'] ) ? $_GET['style'] : $wp_manga_functions->get_reading_style();
+			
+			$classes[] = 'manga-reading-' . $manga_reading_style . '-style';
+		}
+		
+		$manga_archives_item_type_icon = Madara::getOption('manga_archives_item_type_icon', 'off');
+		if($manga_archives_item_type_icon == 'on'){
+			$classes[] = 'manga-type-icon';
+		}
+		
+		$minimal_reading_layout = Madara::getOption('minimal_reading_page', 'off');
+		if($minimal_reading_layout == 'on'){
+			$classes[] = 'minimal-reading-layout';
+		}
+		
+		$sticky_for_mobile = Madara::getOption('manga_reading_sticky_navigation_mobile', 'off');
+		if($sticky_for_mobile == 'on'){
+			$classes[] = 'sticky-for-mobile';
 		}
 
 		return $classes;
@@ -195,4 +265,8 @@
 		}
 		
 		return $args;
+	}
+	
+	function madara_get_badge_choices(){
+		return apply_filters('madara_manga_default_badges', array(esc_html__( 'Hot', 'madara' ), esc_html__( 'New', 'madara' )));
 	}

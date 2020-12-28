@@ -1,11 +1,27 @@
 <?php
 
 	class WP_MANGA_TEMPLATE {
+		
+		public $filters;
 
 		public function __construct() {
-			// add_action( 'pre_get_posts', array( $this, 'date_single' ) );
+			$this->filters = (object)array('wp_filter' => array(), 'merged_filters' => array());
+			
 			add_action( 'template_include', array( $this, 'manga_content' ) );
+			add_action( 'template_redirect', array( $this, 'template_redirect' ));
 		}
+		
+		function template_redirect()
+		{
+			$release = isset( $_GET['wp-manga-release'] ) ? $_GET['wp-manga-release'] : '';
+			
+			if( $release && is_404() )
+			{
+				wp_redirect( home_url( '?s=&post_type=wp-manga&release=' . $release ) );
+				die;
+			}
+		}
+		
 
 		public function manga_content( $template ) {
 
@@ -14,7 +30,8 @@
 			$page_template       = isset( $page_template ) && ! empty( $page_template ) ? $page_template : 'single.php';
 			$this->page_template = $page_template;
 			$style               = isset( $_GET['style'] ) ? $_GET['style'] : 'paged';
-
+			
+			
 			if ( is_singular( 'wp-manga' ) ) {
 				if ( $wp_manga_functions->is_manga_reading_page() ) {
 					$template = $this->load_template( 'manga', 'single-reading', false );
@@ -42,11 +59,14 @@
 					'home_url' => get_home_url(),
 				) );
 			}
-
+			
 			return $template;
 		}
 
-
+		/**
+		 * @params 
+				$include - boolean - should only be used when this function is called directly
+		 **/
 		public function load_template( $name, $extend = false, $include = true ) {
 			$check = true;
 			if ( $extend ) {
@@ -78,7 +98,7 @@
 			if ( ! $include ) {
 				return $template;
 			}
-
+			
 			include $template;
 		}
 

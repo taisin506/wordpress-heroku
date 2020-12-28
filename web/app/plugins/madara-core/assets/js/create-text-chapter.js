@@ -10,6 +10,7 @@
             var postID            = $('input[name="postID"]').val(),
                 chapterName       = $('#chapter-content #wp-manga-chapter-name').val(),
                 chapterNameExtend = $('#chapter-content #wp-manga-chapter-name-extend').val(),
+				chapterIndex = $('#chapter-content #wp-manga-chapter-index').val(),
                 chapterVolume     = $('#chapter-content #wp-manga-volume').val(),
                 chapterContent    = $('#chapter-content #wp-manga-chapter-content').val();
 
@@ -22,20 +23,27 @@
                 mangaSingleMessage( 'Chapter Content cannot be empty', '#chapter-create-msg', false );
             	return;
             }
+			
+			var chapter_data = {
+                action:            'wp_manga_create_content_chapter',
+                postID:            postID,
+                chapterName:       chapterName,
+                chapterNameExtend: chapterNameExtend,
+                chapterIndex: chapterIndex,
+                chapterVolume:     chapterVolume,
+                chapterContent:    chapterContent,
+            };
+
+            window.mangaContentChapterCreateTrigger = chapter_data;
+            $(document).trigger('manga_content_chapter_create', [window.mangaContentChapterCreateTrigger]);
+            chapter_data = window.mangaContentChapterCreateTrigger;
 
             showLoading();
 
             $.ajax({
                 url : wpManga.ajax_url,
                 type : 'POST',
-                data : {
-                    action:            'wp_manga_create_content_chapter',
-                    postID:            postID,
-                    chapterName:       chapterName,
-                    chapterNameExtend: chapterNameExtend,
-                    chapterVolume:     chapterVolume,
-                    chapterContent:    chapterContent,
-                },
+                data : chapter_data,
                 success : function( response ) {
                     if( response.success ){
                         mangaSingleMessage( response.data.message, '#chapter-create-msg', true );

@@ -1,4 +1,117 @@
+function updateHistory( p = 0) {
+	var $ = jQuery;
+	
+	if( typeof user_history_params == 'undefined' ){
+		return;
+	}
+
+	if( $('.wp-manga-chapter-img').length > 0 ){
+		var img = $('.wp-manga-chapter-img').prop('id');
+		var img_id = img.replace('image-', '');
+	}else{
+		var img_id = '';
+	}
+
+	$.ajax({
+		url: user_history_params.ajax_url,
+		type: 'POST',
+		data: {
+			action:      'manga-user-history',
+			postID:      user_history_params.postID,
+			chapterSlug: user_history_params.chapter,
+			paged:       p ? p : user_history_params.page,
+			img_id:      img_id,
+			nonce:       user_history_params.nonce
+		}
+	});
+}
+
+function madara_update_views(){
+	var $ = jQuery;
+	
+	if($('body').hasClass('single-wp-manga')){
+		// is Manga Detail or Reading page
+		if(typeof manga !== 'undefined'){
+            if(manga.enable_manga_view){
+                $.ajax({
+                    url: manga.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'manga_views',
+                        manga: manga.manga_id,
+                        chapter: manga.chapter_slug
+                    },
+                    success: function(data){
+                        //console.log(data);
+                    },
+                    complete: function(e){
+                        //console.log(e.responseJSON);
+                    }
+                });
+            }
+		}
+	}
+}
+	
 jQuery(document).ready(function($){
+
+	function readingScrollToTop(){
+		$('html, body').animate({scrollTop: $('.c-blog-post .reading-content').offset().top }, 500);
+	}
+	
+	if($('#manga-chapters-holder').length > 0){
+		$.ajax({
+				url: manga.ajax_url,
+				type: 'POST',
+				data: {
+					action: 'manga_get_chapters',
+					manga: $('#manga-chapters-holder').data('id')
+				},
+				success: function(data){
+					$('#manga-chapters-holder').html(data);
+					
+					$(document).trigger('wp_manga_after_load_chapters_list');
+				},
+				complete: function(e){
+					//console.log(e.responseJSON);
+				}
+			});
+	} else {
+		setTimeout(function(){$(document).trigger('wp_manga_after_load_chapters_list');}, 1000);
+	}
+	
+	function load_chapters_selectbox(){
+		if($('.chapter-selection').length > 0){
+			var selector = $('.chapter-selection');
+			var args = {
+				action: 'manga_get_reading_nav',
+						manga: $(selector[0]).data('manga'),
+						chapter: $(selector[0]).data('chapter'),
+						volume_id: $(selector[0]).data('vol'),
+						style: $(selector[0]).data('style'),
+						type: $(selector[0]).data('type'),
+			};
+			
+			$.ajax({
+					url: manga.ajax_url,
+					type: 'POST',
+					data: args,
+					success: function(data){
+						$('.chapter-selection').each(function(){
+							$(this).html(data);
+						});
+						
+						$(document).trigger('wp_manga_after_load_reading_nav');
+					},
+					complete: function(e){
+						//console.log(e.responseJSON);
+					}
+				});
+		} else {
+			// trigger to register onclick eevnt
+			$(document).trigger('wp_manga_after_load_reading_nav');
+		}
+	}
 
 	function chapterNavigationAjax( navigation ){
 
@@ -28,22 +141,32 @@ jQuery(document).ready(function($){
 				if(response.success){
 
 					readContainer.html( response.data.data.content );
+					
 					$('.wp-manga-nav').replaceWith( response.data.data.nav );
 					$('.entry-header .wp-manga-nav').prepend( '<div class="entry-header_wrap">' + breadCrumb + '</div>');
 
 					pagination.show();
+					
+					// reattach events
+					wp_manga_on_chapter_navlinks_click();
+					madara_update_views();
+					load_chapters_selectbox();
 
 					$('.wp-manga-nav select').each(function(){
 						$(this).prop('disabled', false);
 					});
+					
+					if(typeof updateHistory !== 'undefined'){
+						updateHistory($('#single-pager').val());
+					}
 
 				} else {
 					readContainer.html(response.data.message);
 				}
 
-				if( $('.go-to-top.active').length > 0 ){
-					$('.go-to-top.active').click();
-				}
+				readingScrollToTop();
+				
+				$(document).trigger('wp_manga_chapterNavigationAjax_done');
 			},
 		});
 	}
@@ -66,6 +189,8 @@ jQuery(document).ready(function($){
 	}
 
 	function loadPreloadedImage( page ){
+
+		readingScrollToTop();
 
 		page = parseInt( page );
 
@@ -107,6 +232,7 @@ jQuery(document).ready(function($){
 
 			var nextBtn = $('.nav-next a'),
 				prevBtn = $('.nav-previous a');
+			var order = nextBtn.data('order');
 
 			// On any case, show both btn first
 			nextBtn.show();
@@ -132,9 +258,10 @@ jQuery(document).ready(function($){
 				}
 			}else{
 				// If this is first page of chapter
-				var prevChapIndex = curChapIndex - 1;
+				var prevChapIndex = (order == 1 ? curChapIndex - 1 : curChapIndex + 1);
+				
 
-				if( prevChapIndex <= 0 ){ // If this is the first chapter of volume
+				if( prevChapIndex <= 0 && order == 1){ // If this is the first chapter of volume
 
 					// console.log( 'First chap' );
 
@@ -153,7 +280,7 @@ jQuery(document).ready(function($){
 						prevURL    = prevChapSelect.data( 'redirect' );
 						prevNavURL = prevChapSelect.data( 'navigation' );
 					}
-				}else{ // if this isn't first chapter, then give prev chapter URL for prev btn
+				} else { // if this isn't first chapter, then give prev chapter URL for prev btn
 					var prevChapSelect = curVolChapSelect.find( 'option:nth-child(' + prevChapIndex + ')' );
 
 					prevURL    = prevChapSelect.data( 'redirect' );
@@ -161,7 +288,7 @@ jQuery(document).ready(function($){
 
 					if( typeof prevChapLastPage !== 'undefined' ){
 						// add manga-paged to prev chap URLs
-						prevURL += '?' + manga.manga_paged_var + '=' + prevChapLastPage;
+						prevURL = prevURL.replace('/p/1', '/p/' + prevChapLastPage);
 						prevNavURL += '&' + manga.manga_paged_var + '=' + prevChapLastPage;
 					}
 				}
@@ -172,6 +299,8 @@ jQuery(document).ready(function($){
 			// Handle next
 			var nextURL = '';
 			var nextNavURL = '';
+			var lastPageOfLastChap = false;
+			
 
 			if( nextPageOption.length > 0 ){ // if there is next page on chapter
 
@@ -188,32 +317,38 @@ jQuery(document).ready(function($){
 					nextNavURL = nextNavURL.replace( re, nextPage );
 				}
 
-			}else{ // If this is the last page of chapter
+			} else { // If this is the last page of chapter
 
 				// console.log( 'Chapter ended' );
 
-				var nextChapIndex = curChapIndex + 1;
+				var nextChapIndex = (order == 1 ? curChapIndex + 1 : curChapIndex - 1);
 
-				if( curChapIndex === curVolChapSelect.find('option').length ){ // If this is the last chapter of volume
+				if(( curChapIndex === curVolChapSelect.find('option').length && order == 1) || (curChapIndex == 1 && !order)){ // If this is the last chapter of volume
 
 					// console.log( 'Volume ended' );
 
 					var nextVolIndex = curVolIndex + 1;
 
-					if( ! mangaHasVolume || curVolIndex === volSelect.find('option').length ){ //If it's last volume or manga has no volume and this is the last chap
+					if( ! mangaHasVolume || (curVolIndex === volSelect.find('option').length && order == 1) || (curVolIndex === 1 && !order) ){ //If it's last volume or manga has no volume and this is the last chap
 
 						// console.log( 'Manga ended' );
 
-						// If it's the last volume then hide the next button
-						nextBtn.hide();
-					}else{
+						// If it's the last page of last chap 
+						if (mangaNav.backInfoPage == 'on'){
+							nextBtn.text(mangaNav.text.backInfoPage).removeClass('next_page').addClass('back');
+							nextURL = mangaNav.mangaUrl;
+							lastPageOfLastChap = true;
+						}else{ //hide if there's no back info page 
+							nextBtn.hide();
+						}
+					} else {
 						// Else go to the first chapter of next volume
 						var nextChapSelect = $('.selectpicker_chapter:nth-child(' + nextVolIndex + ') .single-chapter-select option:nth-child(2)');
 
 						nextURL    = nextChapSelect.data( 'redirect' );
 						nextNavURL = nextChapSelect.data( 'navigation' );
 					}
-				}else{ // if this isn't last chapter, then give next chapter URL for next btn
+				} else { // if this isn't last chapter, then give next chapter URL for next btn
 					var nextChapSelect = curVolChapSelect.find( 'option:nth-child(' + nextChapIndex + ')' );
 
 					nextURL    = nextChapSelect.data( 'redirect' );
@@ -224,28 +359,40 @@ jQuery(document).ready(function($){
 			nextBtn.data( 'navigation', nextNavURL );
 			nextBtn.attr( 'href', nextURL );
 
+			// if it's not last page of last chap, make sure it has correct class and text of Next button
+			if (!lastPageOfLastChap){
+				nextBtn.text(mangaNav.text.next).addClass('next_page').removeClass('back');
+			}
+
 			// Remove all current images
 			$readingContent.find( 'img' ).remove();
 
 			var paged = chapter_images_per_page * ( page - 1 ) + 1;
 			var hasCursorLink = $('.reading-content .page-prev-link').length;
 
+			var images_html = '';
 			for( var i = 1; i <= chapter_images_per_page; i++ ){
 
-				if( typeof chapter_preloaded_images[ paged ] !== 'undefined' ){
-					var img = '<img id="image-' + paged + '" data-image-paged="' + paged + '" src="' + chapter_preloaded_images[ paged ] + '" class="wp-manga-chapter-img">';
-
-					if( hasCursorLink ){ //If there is cursor link then append after the prev cursor link
-						$(img).insertAfter( '.reading-content .page-prev-link' );
-					}else{ //or just append it to .reading-content
-						$('.reading-content').append( img );
-					}
-
+				if( typeof chapter_preloaded_images[ paged - 1 ] !== 'undefined' ){
+					images_html += '<img id="image-' + paged + '" data-image-paged="' + paged + '" src="' + chapter_preloaded_images[ paged - 1 ] + '" class="wp-manga-chapter-img">';
+					
 					paged++;
-				}else{
+				} else {
 					break;
 				}
 			}
+			
+			if( hasCursorLink ){ //If there is cursor link then append after the prev cursor link
+				$(images_html).insertAfter( '.reading-content .page-prev-link' );
+			}else{ //or just append it to .reading-content
+				$('.reading-content').append( images_html );
+			}
+			
+			if(typeof updateHistory !== 'undefined'){
+				updateHistory(paged);
+			}
+			
+			$(document).trigger('wp_manga_after_load_chapter_page', [page]);
 
 			return true;
 		}else{
@@ -253,62 +400,171 @@ jQuery(document).ready(function($){
 		}
 
 	}
+	
+	$('.btn-text-reading-increase').on('click', function(e){
+		var fontSize = $('.reading-content .text-left').css('font-size');
+		var newFontValue = parseInt(fontSize.replace('px', '')) + 1;
+		$('.reading-content .text-left').css('font-size', newFontValue + 'px');
+		$('.reading-content .text-left').css('line-height', (newFontValue * 1.5) + 'px');
+		// save cookie
+		window.wpmanga.setCookie('wpmanga-reading-fontsize', newFontValue, 30);
+		
+		e.preventDefault();
+		e.stopPropagation();
+		return false;
+	});
+	
+	$('.btn-text-reading-decrease').on('click', function(e){
+		var fontSize = $('.reading-content .text-left').css('font-size');
+		var newFontValue = parseInt(fontSize.replace('px', '')) - 1;
+		$('.reading-content .text-left').css('font-size', (newFontValue < 5 ? 5 : newFontValue) + 'px');
+		
+		$('.reading-content .text-left').css('line-height', (newFontValue < 5 ? 7.5 : newFontValue * 1.5) + 'px');
+		
+		// save cookie
+		window.wpmanga.setCookie('wpmanga-reading-fontsize', newFontValue, 30);
+		
+		e.preventDefault();
+		e.stopPropagation();
+		return false;
+	});
+	
+	$('#text-chapter-toolbar a').on('click', function(e){
+		$('.entry-header.footer').toggleClass('sticky');
+		$('#text-chapter-toolbar').toggleClass('sticky');
+		
+		e.preventDefault();
+		e.stopPropagation();
+		return false;
+	});
 
-	//chapter next page ajax
-	$(document).on('click', '.wp-manga-nav .nav-links > div > a.btn', function(e){
-
-		var navigation = $(this).data('navigation'),
-			url = $(this).attr('href');
-
-		var use_preloaded_images = false,
-			redirect = true;
+	// Handle navigate by clicked Back/Forward in button in browser
+	/*
+	 * Temp remove it as it reloads page even on link with hashtag
+	 
+	$(window).on('popstate', function () {
+		
+		var curURL = window.location.href,
+			use_preloaded_images = false,
+			redirect = true,
+			navNext = $('.select-pagination .nav-links .nav-next > a.next_page'),
+			navPrev = $('.select-pagination .nav-links .nav-next > a.prev_page'),
+			isNext = false;
+		
+		if (curURL == navNext.attr('href')) {
+			isNext = true;
+			navigation = navNext.data('navigation');
+		} else if (curURL == navPrev.attr('href')) {
+			navigation = navPrev.data('navigation');
+		}
 
 		// If use preloaded images is on, then use it first
-		if( typeof chapter_preloaded_images !== 'undefined' ){
-			use_preloaded_images = chapterPreloadedImagesNavigation( $(this).hasClass('next_page') ? true : false );
+		if (typeof chapter_preloaded_images !== 'undefined') {
+			use_preloaded_images = chapterPreloadedImagesNavigation(isNext ? true : false );
 
-			if( use_preloaded_images ){
-				e.preventDefault();
+			if (use_preloaded_images) {
 				redirect = false;
 			}
 		}
 
 		// If use preloaded image failed, then use ajax if it's on
-		if( ! use_preloaded_images && typeof navigation !== 'undefined' && navigation !== '' && typeof mangaReadingAjax !== 'undefined' ){
-			e.preventDefault();
-			chapterNavigationAjax( navigation );
+		if (!use_preloaded_images && typeof navigation !== 'undefined' && navigation !== '' && typeof mangaReadingAjax !== 'undefined') {
+			chapterNavigationAjax(navigation);
 			redirect = false;
 		}
 
-		if( typeof url !== 'undefined' && url !== '' ){
-			history.pushState({}, null, url );
-		}
-
-		if( redirect ) {
-			return true;
-		}else{
-			return false;
+		if (redirect) {
+			window.location.reload();
 		}
 
 	});
+	
+	**/
 
-	$(document).on('click', '.c-blog-post .entry-content .entry-content_wrap .reading-content img', function(e){
-		e.preventDefault();
-		$('.wp-manga-nav .nav-links a.next_page')[0].click();
-	});
+	function wp_manga_on_chapter_navlinks_click(){
+		//chapter next page ajax
+		$('.wp-manga-nav .nav-links > div > a.btn').each(function(){
+			$(this).unbind('click');
+			$(this).on('click', function(e){
+				if($(this).hasClass('back')){
+					return true;
+				}
 
-	//show appropriate chapter select for volume
-	$(document).on('change', '.selectpicker.volume-select', function(){
-		$('.chapter-selection > .c-selectpicker.selectpicker_chapter').each(function(){
-			$(this).hide();
+				var navigation = $(this).data('navigation'),
+					url = $(this).attr('href');
+
+				var use_preloaded_images = false,
+					redirect = true;
+
+				// If use preloaded images is on, then use it first
+				if( typeof chapter_preloaded_images !== 'undefined' ){
+					use_preloaded_images = chapterPreloadedImagesNavigation( $(this).hasClass('next_page') ? true : false );
+
+					if( use_preloaded_images ){
+						e.preventDefault();
+						redirect = false;
+					}
+				}
+
+				// If use preloaded image failed, then use ajax if it's on
+				if( ! use_preloaded_images && typeof navigation !== 'undefined' && navigation !== '' && typeof mangaReadingAjax !== 'undefined' ){
+					e.preventDefault();
+					
+					$(document).trigger('wp_manga_on_chapter_navlinks_click');
+					
+					chapterNavigationAjax( navigation );
+					redirect = false;
+				}
+
+				if( typeof url !== 'undefined' && url !== '' ){
+					history.pushState({}, null, url );
+				}
+
+				if( redirect ) {
+					return true;
+				}else{
+					return false;
+				}
+
+			});
 		});
-		$('.chapter-selection > .c-selectpicker.selectpicker_chapter[for="volume-id-' + $(this).val() + '"]').show();
+	}
+	wp_manga_on_chapter_navlinks_click();
+	
+	// if reading list style is used, scroll on mouse click
+	function wp_manga_scroll_on_click(){
+		if($('body').hasClass('click-to-scroll')){
+			$('.manga-reading-list-style .chapter-type-manga .reading-content').on('click', function(){
+				$('html, body').animate({scrollTop: $(document).scrollTop() + 500 }, 200);
+			});
+			
+			$('.chapter-type-text .reading-content').on('click', function(){
+				$('html, body').animate({scrollTop: $(document).scrollTop() + 500 }, 1000);
+			});
+		}
+	}
+	wp_manga_scroll_on_click();
+	
+	/*
+	$(document).on('click', '.chapter-type-manga .c-blog-post .entry-content .entry-content_wrap .reading-content img', function(e){
+		e.preventDefault();
+		if($('.wp-manga-nav .nav-links a.next_page').length > 0){
+			$('.wp-manga-nav .nav-links a.next_page')[0].click();
+		}
 	});
+	*/
+
+	
 
 	//navigate by keyword button
 	$(document).keydown(function(e){
 		var redirect = '';
 
+		// check if there is any focus input or textarea
+		if(document.activeElement && document.activeElement.tagName == 'INPUT' || document.activeElement.tagName == 'TEXTAREA'){
+			return;
+		}
+		
 		if( e.keyCode == 37 && $('.wp-manga-nav .nav-links .nav-previous > a').length > 0 ){	//left key
 			$('.wp-manga-nav .nav-links a.prev_page')[0].click();
 		}else if( e.keyCode == 39 &&  $('.wp-manga-nav .nav-links .nav-next > a').length > 0 ){ //right key
@@ -327,48 +583,66 @@ jQuery(document).ready(function($){
 			}
 			return true;
 		});
+		
+		load_chapters_selectbox();
 	});
+	
+	$(document).on('wp_manga_after_load_reading_nav', function(){
+		//show appropriate chapter select for volume
+		$(document).on('change', '.selectpicker.volume-select', function(){
+			$('.chapters_selectbox_holder .c-selectpicker.selectpicker_chapter').each(function(){
+				$(this).hide();
+			});
+			$('.chapters_selectbox_holder .c-selectpicker.selectpicker_chapter[for="volume-id-' + $(this).val() + '"]').show();
+		});
 
-	$(document).on( 'change', '.wp-manga-nav .single-chapter-select, #single-pager, .wp-manga-nav .host-select, .wp-manga-nav .reading-style-select', function(e){
+		$(document).on( 'change', '.wp-manga-nav .single-chapter-select, #single-pager, .wp-manga-nav .host-select, .wp-manga-nav .reading-style-select', function(e){
 
-		e.preventDefault();
+			e.preventDefault();
 
-		var isPageSelect = $(this).attr('id') == 'single-pager' ? true : false;
-		var isChapterSelect = $(this).hasClass('single-chapter-select') ? true : false;
+			var isPageSelect = $(this).attr('id') == 'single-pager' ? true : false;
+			var isChapterSelect = $(this).hasClass('single-chapter-select') ? true : false;
+			
+			if( isPageSelect || isChapterSelect ){
+				var navigation = $(this).find('option:selected').data('navigation');
+				var url = $(this).find('option:selected').data('redirect');
 
-		if( isPageSelect || isChapterSelect ){
-			var navigation = $(this).find('option:selected').data('navigation');
-			var url = $(this).find('option:selected').data('redirect');
+				var use_preloaded_images = false,
+					redirect = true;
 
-			var use_preloaded_images = false,
-				redirect = true;
+				if( isPageSelect && typeof chapter_preloaded_images !== 'undefined' ){
+					$(this).blur();
+					use_preloaded_images = loadPreloadedImage( $(this).val() );
 
-			if( isPageSelect && typeof chapter_preloaded_images !== 'undefined' ){
-				use_preloaded_images = loadPreloadedImage( $(this).val() );
+					if( use_preloaded_images ){
+						redirect = false;
+					}
+				}
 
-				if( use_preloaded_images ){
+				if( ! use_preloaded_images && typeof mangaReadingAjax !== 'undefined' && typeof navigation !== 'undefined' && navigation !== '' ){
+					chapterNavigationAjax( navigation );
 					redirect = false;
 				}
+
+				if( ! redirect ){
+                    if( typeof url !== 'undefined' && url !== '' ){
+                        history.pushState( {}, null, url );
+                    }
+                    
+					return false;
+				}
+
 			}
 
-			if( ! use_preloaded_images && typeof mangaReadingAjax !== 'undefined' && typeof navigation !== 'undefined' && navigation !== '' ){
-				chapterNavigationAjax( navigation );
-				redirect = false;
+			var t = $(this);
+			var redirect = t.find(':selected').attr('data-redirect');
+			
+			if(redirect != '#'){
+				window.location = redirect;
 			}
-
-			if( typeof url !== 'undefined' && url !== '' ){
-				history.pushState( {}, null, url );
-			}
-
-			if( ! redirect ){
-				return false;
-			}
-
-		}
-
-		var t = $(this);
-		var redirect = t.find(':selected').attr('data-redirect');
-		window.location = redirect;
+			
+			$(document).trigger('wp_manga_chapter_redirect', [$(this), redirect, isPageSelect, isChapterSelect]);
+		});
 	});
 
 	var ajaxHandling = false;
@@ -396,7 +670,17 @@ jQuery(document).ready(function($){
 				ajaxHandling = true;
 				var t       = $(this);
 				var postID  = t.data( 'post' );
-				var chapter = t.data( 'chapter' );
+				
+				var volSelect = $('.volume-select');
+
+				var mangaHasVolume = volSelect.length > 0 ? true : false;
+
+				var curVol = mangaHasVolume ? volSelect.val() : 0;
+
+				var	curVolChapSelect = $('.selectpicker_chapter[for="volume-id-' + curVol + '"] .single-chapter-select');
+				
+				var chapter = $('#wp-manga-current-chap').length > 0 ? $('#wp-manga-current-chap').val() : ''; // get selected chapter slug
+				
 				var page    = t.data( 'page' );
 				jQuery.ajax({
 					url: manga.ajax_url,
@@ -420,10 +704,14 @@ jQuery(document).ready(function($){
 							}
 
 						} else {
-							if ( response.data.code == 'login_error' ) {
-
+							if(!response.data){
+								alert('Some errors occured. Please try again');
 							} else {
-								alert( response.data.code );
+								if ( response.data.code == 'login_error' ) {
+
+								} else {
+									alert( response.data.code );
+								}
 							}
 						}
 					},
@@ -435,6 +723,9 @@ jQuery(document).ready(function($){
 		} else {
 			if($(this).attr('data-action') == 'toggle-contrast'){
 				$('body').toggleClass('text-ui-light');
+				
+				// save cookie
+				window.wpmanga.setCookie('wpmanga-reading-contrast',$('body').hasClass('text-ui-light') ? 'light' : 'dark', 30);
 			}
 		}
 	})
@@ -483,9 +774,13 @@ jQuery(document).ready(function($){
 							$('.add-bookmark').append( response.data );
 							$('.add-bookmark').css('opacity', '1');
 						}else if( typeof isMangaSingle !== 'undefined' && isMangaSingle == false ){
-							$('.action_list_icon > li:first-child').empty();
-							$('.action_list_icon > li:first-child').append( response.data );
-							$('.action_list_icon > li:first-child').css('opacity', '1');
+							if(response.data.is_empty == true){
+								alert(response.data.msg);
+							} else {
+								$('.action_list_icon > li:first-child').empty();
+								$('.action_list_icon > li:first-child').append( response.data );
+								$('.action_list_icon > li:first-child').css('opacity', '1');
+							}
 						}
 		            }
 		        },
@@ -546,7 +841,7 @@ jQuery(document).ready(function($){
 
     // search
     // manga-search-field
-	$('form.manga-search-form input.manga-search-field').each(function(){
+	$('form.manga-search-form.ajax input.manga-search-field').each(function(){
 
 		var searchIcon = $(this).parent().children('.ion-ios-search-strong');
 
@@ -570,11 +865,13 @@ jQuery(document).ready(function($){
 									label: item.title,
 									value: item.title,
 									url: item.url,
+									type: item.type
 								}
 							} else {
 								return {
 									label: item.message,
 									value: item.message,
+									type: item.type,
 									click: false
 								}
 							}
@@ -595,13 +892,29 @@ jQuery(document).ready(function($){
 			},
 			open: function( e, ui ) {
 				var acData = $(this).data( 'uiAutocomplete' );
-				acData.menu.element.addClass('manga-autocomplete').find('li').each(function(){
+				acData.menu.element.addClass('manga-autocomplete').find('li div').each(function(){
 					var $self = $(this),
 						keyword = $.trim( acData.term ).split(' ').join('|');
 					$self.html( $self.text().replace( new RegExp( "(" + keyword + ")", "gi" ), '<span class="manga-text-highlight">$1</span>' ) );
 				});
-			}
-		});
+			},
+            change: function(e,ui){
+                return false;
+                e.stopPropagation();
+            }
+		}).autocomplete( "instance" )._renderItem = function( ul, item ) {
+			  return $( "<li class='search-item'>" )
+				.append( "<div class='manga-type-" + item.type + "'>" + item.label + "</div>" )
+				.appendTo( ul );
+		};
+	});
+	
+	$('input[name="wp-manga-user-avatar"]').on('change', function(e){
+		if( this.files.length ){
+			$('.file-name').html(this.files[0].name);
+		}else{
+			$('.file-name').html('');
+		}
 	});
 
 	$(document).on( 'click', '#wp-manga-upload-avatar', function(e){
@@ -638,9 +951,11 @@ jQuery(document).ready(function($){
 				if( response.success ) {
 					userAvatarSection.empty();
 					userAvatarSection.append( response.data );
+				} else {
+					alert( response.data.msg );
 				}
 			},
-			complete: function(){
+			complete: function(response, xhr ){
 				thisBtn.removeAttr('disabled');
 				chooseAvatar.removeClass('uploading');
 			}
@@ -734,28 +1049,48 @@ jQuery(document).ready(function($){
 		
 	});
 	
-	$('.video-light').on('click', function(e){
-		$('.video-light').toggleClass('off');
-		$('.chapter-video-frame').toggleClass('off');
-		
-		e.stopPropagation();
-		return false;	
-	});
-	
-	// turn on the light
-	if($('.video-light').length > 0){
-		$(document).on('click', function(e){
-			var container = $(".chapter-video-frame");
-			
-			if(container.hasClass('off')){
-				// if the target of the click isn't the container nor a descendant of the container
-				if (container.is(e.target) && container.has(e.target).length === 0) 
-				{
-					$('.video-light').toggleClass('off');
-					$('.chapter-video-frame').toggleClass('off');
-				}
-			}
-		});
+	window.wpmanga = {};
+	window.wpmanga.setCookie = function(cname, cvalue, exdays) {
+		var d = new Date();
+		d.setTime(d.getTime() + (exdays*24*60*60*1000));
+		var expires = "expires="+ d.toUTCString();
+		document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
 	}
-
+	
+	window.wpmanga.getCookie = function(cname) {
+		var name = cname + "=";
+		var decodedCookie = decodeURIComponent(document.cookie);
+		var ca = decodedCookie.split(';');
+		for(var i = 0; i <ca.length; i++) {
+			var c = ca[i];
+			while (c.charAt(0) == ' ') {
+				c = c.substring(1);
+			}
+			if (c.indexOf(name) == 0) {
+				return c.substring(name.length, c.length);
+			}
+		}
+		return "";
+	}
+	
+	if($('body').hasClass('reading-manga')){
+		var $schema_cookie = window.wpmanga.getCookie('wpmanga-reading-contrast');
+		if($schema_cookie != ''){
+			if($schema_cookie == 'light'){
+				$('body').addClass('text-ui-light');
+				$('body').removeClass('text-ui-dark');
+			} else{
+				$('body').removeClass('text-ui-light');
+				$('body').addClass('text-ui-dark');
+			}
+		}
+		
+		var fontsize = window.wpmanga.getCookie('wpmanga-reading-fontsize');
+		if($('.c-page-content.chapter-type-text').length > 0 && fontsize){
+			$('.reading-content .text-left').css('font-size', fontsize + 'px');
+			$('.reading-content .text-left').css('line-height', (fontsize * 1.5) + 'px');
+		}
+	}
+	
+	madara_update_views();
 });

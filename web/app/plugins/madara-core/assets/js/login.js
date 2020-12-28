@@ -15,17 +15,17 @@ jQuery(document).ready(function ($) {
 		var modalContent = $(this).parents('.modal-content');
 
 		if (user_login == '') {
-			$('p.message.register').text('Username can\'t be empty');
+			$('p.message.register').text(wpMangaLogin.messages.username_cannot_empty);
 			return false;
 		}
 
 		if (user_email == '') {
-			$('p.message.register').text('Username can\'t be empty');
+			$('p.message.register').text(wpMangaLogin.messages.email_cannot_empty);
 			return false;
 		}
 
 		if (user_pass == '') {
-			$('p.message.sign-up').text('Password can\'t be empty');
+			$('p.message.sign-up').text(wpMangaLogin.messages.password_cannot_empty);
 			return false;
 		}
 
@@ -44,13 +44,15 @@ jQuery(document).ready(function ($) {
 			},
 			success: function (response) {
 				if (response.success) {
+					$(document).trigger('madara_signup_successful');
+					
 					$('form#registerform').remove();
 					$('p.message.register').html(response.data);
 				} else {
 					$('p.message.register').html(response.data);
 
 					// Reset recaptcha on failure
-					if( typeof grecaptcha !== 'undefined' ){
+					if( $('#loginform .g-recaptcha-response').length > 0 ){
 						grecaptcha.reset();
 					}
 				}
@@ -87,12 +89,12 @@ jQuery(document).ready(function ($) {
 		var modalContent = $(this).parents('.modal-content');
 
 		if (user_login == '') {
-			$('p.message.login').text('Please enter username');
+			$('p.message.login').text(wpMangaLogin.messages.please_enter_username);
 			return false;
 		}
 
 		if (user_pass == '') {
-			$('p.message.login').text('Please enter username');
+			$('p.message.login').text(wpMangaLogin.messages.please_enter_password);
 			return false;
 		}
 
@@ -153,24 +155,28 @@ jQuery(document).ready(function ($) {
 					$('p.message.login').html(response.data);
 
 					// Reset recaptcha on failure
-					if( typeof grecaptcha !== 'undefined' ){
+					if( $('#loginform .g-recaptcha-response').length > 0 ){
 						grecaptcha.reset();
 					}
 
 				} else {
-					$('p.message.login').text('Invalid Username or Password');
+					$('p.message.login').text(wpMangaLogin.messages.invalid_username_or_password);
 
 					// Reset recaptcha on failure
-					if( typeof grecaptcha !== 'undefined' ){
+					if( $('#loginform .g-recaptcha-response').length > 0 ){
 						grecaptcha.reset();
 					}
 				}
 			},
-			complete: function () {
+			complete: function (xhr, response) {
 				var loading = modalContent.find('.modal-loading-screen');
 
 				if (typeof loading !== 'undefined') {
 					loading.remove();
+				}
+				
+				if(response == 'error'){
+					alert(wpMangaLogin.messages.server_error);
 				}
 			},
 		});
@@ -184,7 +190,7 @@ jQuery(document).ready(function ($) {
 		var user = $('input[name="user_reset"]').val();
 
 		if (user == '') {
-			$('p.message.reset').text('Username or Email cannot be empty');
+			$('p.message.reset').text(wpMangaLogin.messages.username_or_email_cannot_be_empty);
 			return false;
 		}
 
@@ -240,17 +246,17 @@ jQuery(document).ready(function ($) {
 		var modalContent = self.parents('.modal-content');
 
 		if( pass_1 == '' || pass_2 == '' ){
-			message.text( 'Please fill in all password fields.' );
+			message.text( wpMangaLogin.messages.please_fill_all_fields );
 			return false;
 		}
 
 		if( pass_1.length < 12 ){
-			message.text( 'Password cannot has less than 12 characters');
+			message.text( wpMangaLogin.messages.password_cannot_less_than_12);
 			return false;
 		}
 
 		if( pass_1 !== pass_2 ){
-			message.text( 'Password doesn\'t match. Please  try again.' );
+			message.text( wpMangaLogin.messages.password_doesnot_match );
 			return false;
 		}
 

@@ -1,5 +1,11 @@
 <?php
-
+/**
+ * Nav Menu API: Walker_Nav_Menu class
+ *
+ * @package WordPress
+ * @subpackage Nav_Menus
+ * @since 4.6.0
+ */
 
 	/**
 	 * Custom Walker Nav Menu for Mobile
@@ -51,8 +57,23 @@
 				$n = "\n";
 			}
 			$indent = str_repeat( $t, $depth );
+			
+			// Default class.
+			$classes = array( 'sub-menu', 'panel-collapse', 'collapse', 'sub-menu' );
 
-			$output .= "{$n}{$indent}<ul id=\"sub-menu-id-{$this->curItem->ID}\" class=\"panel-collapse collapse sub-menu\">{$n}";
+			/**
+			 * Filters the CSS class(es) applied to a menu list element.
+			 *
+			 * @since 4.8.0
+			 *
+			 * @param string[] $classes Array of the CSS classes that are applied to the menu `<ul>` element.
+			 * @param stdClass $args    An object of `wp_nav_menu()` arguments.
+			 * @param int      $depth   Depth of menu item. Used for padding.
+			 */
+			$class_names = join( ' ', apply_filters( 'nav_menu_submenu_css_class', $classes, $args, $depth ) );
+			$class_names = $class_names ? ' class="' . esc_attr( $class_names ) . '"' : '';
+
+			$output .= "{$n}{$indent}<ul id=\"sub-menu-id-{$this->curItem->ID}\" $class_names>{$n}";
 		}
 
 		/**
@@ -149,8 +170,13 @@
 			$atts           = array();
 			$atts['title']  = ! empty( $item->attr_title ) ? $item->attr_title : '';
 			$atts['target'] = ! empty( $item->target ) ? $item->target : '';
-			$atts['rel']    = ! empty( $item->xfn ) ? $item->xfn : '';
+			if ( '_blank' === $item->target && empty( $item->xfn ) ) {
+				$atts['rel'] = 'noopener noreferrer';
+			} else {
+				$atts['rel'] = $item->xfn;
+			}
 			$atts['href']   = ! empty( $item->url ) ? $item->url : '';
+			$atts['aria-current'] = $item->current ? 'page' : '';
 
 			/**
 			 * Filters the HTML attributes applied to a menu item's anchor element.

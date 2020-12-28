@@ -11,6 +11,8 @@
 ?>
     <div id="chapter-content" class="tab-content chapter-content-tab">
         <div class="chapter-input">
+		
+			<?php do_action( 'manga_chapter_upload_url_before_form_fields', $manga_post ); ?>
 
             <h2><label for="wp-manga-volume"> <?php esc_attr_e( 'Volume', WP_MANGA_TEXTDOMAIN ) ?></label></h2>
 
@@ -32,7 +34,13 @@
                 <label for="wp-manga-chapter-name-extend"> <?php esc_attr_e( 'Name Extend', WP_MANGA_TEXTDOMAIN ) ?> </label>
             </h2>
             <input type="text" id="wp-manga-chapter-name-extend" name="wp-manga-chapter-name-extend" class="large-text disable-submit" value="" tabindex="1">
-            <span class="description"><?php esc_attr_e( 'Name extend of chapter for better display => Chapter name: Name extend', WP_MANGA_TEXTDOMAIN ) ?></span>
+            <span class="description"><?php esc_attr_e( '(optional) Name extend of chapter for better display => Chapter name: Name extend', WP_MANGA_TEXTDOMAIN ) ?></span>
+			
+			<h2>
+                <label for="wp-manga-chapter-index"> <?php esc_attr_e( 'Chapter Index', WP_MANGA_TEXTDOMAIN ) ?> </label>
+            </h2>
+            <input type="text" id="wp-manga-chapter-index" name="wp-manga-chapter-index" class="large-text disable-submit" value="" tabindex="1">
+            <span class="description"><?php esc_attr_e( '(Optional) Index of Chapter which is used to sort Chapter', WP_MANGA_TEXTDOMAIN ) ?></span>
 
             <h2>
                 <label for="wp-manga-chapter-content"> <?php esc_attr_e( 'Chapter Content', WP_MANGA_TEXTDOMAIN ); ?></label>

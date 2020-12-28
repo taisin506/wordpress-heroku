@@ -31,10 +31,9 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
         <link><?php bloginfo_rss('url') ?></link>
         <description><?php bloginfo_rss('description') ?></description>
         <lastBuildDate><?php echo mysql2date('D, d M Y H:i:s +0000', get_lastpostmodified('GMT'), false); ?></lastBuildDate>
-        <language><?php echo get_option('rss_language'); ?></language>
+        <language><?php bloginfo_rss( 'language' ); ?></language>
         <sy:updatePeriod><?php echo apply_filters( 'rss_update_period', 'hourly' ); ?></sy:updatePeriod>
         <sy:updateFrequency><?php echo apply_filters( 'rss_update_frequency', '1' ); ?></sy:updateFrequency>
-        <?php do_action('rss2_head'); ?>
         <?php foreach($results as $result){
 				$manga_id = $result->post_id;
 				$chapter_slug = $result->chapter_slug;
@@ -45,6 +44,7 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
 				$manga_title = esc_html__('Unknown', WP_MANGA_TEXTDOMAIN);
 				if($manga){
 					$manga_title = $manga->post_title;
+					if($manga->post_status != 'publish') continue;
 				}
 				
 				$chapter_name = $result->chapter_name;
@@ -102,11 +102,11 @@ echo '<?xml version="1.0" encoding="'.get_option('blog_charset').'"?'.'>';
 				$keywords = "{$manga_title} {$chapter_name}" . ( !empty( $c_name_extend ) ? ", {$c_name_extend}" : "" );
 		?>
                 <item>
+						<guid isPermaLink="false"><?php echo $result->chapter_id; ?></guid>
                         <title><?php echo esc_html($chapter_name); ?></title>
                         <link><?php echo esc_url($link); ?></link>
                         <pubDate><?php echo mysql2date('D, d M Y H:i:s +0000', $result->date_gmt, false); ?></pubDate>
                         <description><![CDATA[<?php echo $description; ?>]]></description>
-                        <?php rss_enclosure(); ?>
                         <?php do_action('manga_chapter_rss_item', $manga_id, $chapter_slug); ?>
                 </item>
         <?php } ?>

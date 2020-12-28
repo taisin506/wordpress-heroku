@@ -26,7 +26,7 @@
 		 *
 		 * @var  string
 		 */
-		const VERSION = '1.0';
+		const VERSION = '1.6.5';
 
 		private static $instance;
 
@@ -107,10 +107,23 @@
 			global $wp_query;
 
 			if ( $wp_query->is_singular( ) ) {
-
+				
 				$setting = get_post_meta( get_the_ID(), $option, true );
 
+				$is_empty = false;
 				if ( ! isset( $setting ) || $setting == '' || $setting == 'default' ) {
+					$is_empty = true;
+				} elseif(is_array($setting)){
+					$is_empty = true;
+					foreach($setting as $key => $value){
+						if(!empty($value)){
+							$is_empty = false;
+							break;
+						}
+					}
+				}
+				
+				if($is_empty){
 					// if current page/post setting is empty, then check in Theme Options
 					// this requires same names in metadata and theme options
 					$setting = \App\Config\OptionTree::getOption( $option, $default_value );
@@ -139,13 +152,9 @@
 			/**
 			 * Base template tags and functions for this theme.
 			 */
-			if ( file_exists( get_parent_theme_file_path( '/app/inc/template-tags.php' ) ) ) {
-				require( 'inc/template-tags.php' );
-			}
+			require( 'inc/template-tags.php' );
 
-			if ( file_exists( get_parent_theme_file_path( '/app/inc/extras.php' ) ) ) {
-				require( 'inc/extras.php' );
-			}
+			require( 'inc/extras.php' );
 
 			/**
 			 * Import all Metadatas
@@ -377,7 +386,7 @@
 			}
 
 
-			wp_enqueue_script( 'bootstrap', get_parent_theme_file_uri( '/js/bootstrap.min.js' ), array(), '3.3.7', true );
+			wp_enqueue_script( 'bootstrap', get_parent_theme_file_uri( '/js/bootstrap.min.js' ), array(), '4.3.1', true );
 			wp_enqueue_script( 'shuffle', get_parent_theme_file_uri( '/js/shuffle.min.js' ), array(), '', true );
 		}
 

@@ -47,7 +47,7 @@
 			$madara_single_category = \App\Madara::getOption( 'single_category', 'on' );
 			$madara_page_meta_tags  = \App\Madara::getOption( 'page_meta_tags', 'on' );
 
-			if ( $madara_page_meta_tags == 'on' || $madara_post_meta_tags == 'on' ) : ?>
+			if ( ($madara_page_meta_tags == 'on' && is_page()) || ($madara_post_meta_tags == 'on' && is_single()) ) : ?>
                 <div class="post-on">
                     <span class="font-meta"><?php echo esc_html__( 'posted on', 'madara' ); ?></span>
                     <div class="c-blog__date">

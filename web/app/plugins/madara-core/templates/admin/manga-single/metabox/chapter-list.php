@@ -30,7 +30,7 @@
         <!--start listing chapter-->
         <div class="chapter-list">
             <?php
-                $all_chapters = $wp_manga_post_type->list_all_chapters( $post_id );
+                $all_chapters = $wp_manga_post_type->list_all_chapters( $post_id, 'asc' );
                 if( $all_chapters !== false ) {
                     echo $all_chapters;
                 }else{

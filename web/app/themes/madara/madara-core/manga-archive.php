@@ -13,7 +13,7 @@
 
 	$madara_breadcrumb     = Madara::getOption( 'manga_archive_breadcrumb', 'on' );
 
-	$manga_archive_heading = Madara::getOption( 'manga_archive_heading', 'All Manga' );
+	$manga_archive_heading = Madara::getOption( 'manga_archive_heading', esc_html__('All Mangas', 'madara') );
 	$manga_archive_heading = apply_filters( 'madara_archive_heading', $manga_archive_heading );
 	
 	$manga_archives_item_layout = Madara::getOption( 'manga_archives_item_layout', 'default' );
@@ -73,10 +73,10 @@
                                 <div class="entry-header">
                                     <div class="entry-header_wrap">
                                         <div class="entry-title">
-                                            <h2 class="item-title"><?php echo apply_filters( 'madara_archive_taxonomy_heading', isset( $tax->name ) ? $tax->name : '' ); ?></h2>
+                                            <h1 class="item-title h4"><?php echo apply_filters( 'madara_archive_taxonomy_heading', isset( $tax->name ) ? $tax->name : '' ); ?></h1>
 											<?php
 											if($tax->description != '') {?>
-											<p class="item-description"><?php echo ($tax->description);?></p>
+											<p class="item-description"><?php echo wp_kses_post($tax->description);?></p>
 											<?php }?>
                                         </div>
                                     </div>
@@ -86,7 +86,7 @@
                                 <div class="entry-header">
                                     <div class="entry-header_wrap">
                                         <div class="entry-title">
-                                            <h2 class="item-title"><?php echo esc_html( $manga_archive_heading ) ?></h2>
+                                            <h1 class="item-title h4"><?php echo esc_html( $manga_archive_heading ) ?></h1>
                                         </div>
                                     </div>
                                 </div>
@@ -97,10 +97,10 @@
                                 <div class="tab-wrap">
                                     <div class="c-blog__heading style-2 font-heading">
 
-                                        <h4>
+                                        <div class="h4">
                                             <i class="<?php madara_default_heading_icon(); ?>"></i>
 											<?php echo sprintf( _n( '%s result', '%s results', $manga_query->post_count, 'madara' ), $manga_query->found_posts ); ?>
-                                        </h4>
+                                        </div>
 										<?php get_template_part( 'madara-core/manga-filter' ); ?>
                                     </div>
                                 </div>
@@ -122,6 +122,8 @@
 
 														$manga_query->the_post();
 														get_template_part( 'madara-core/content/content', 'archive' );
+														
+														do_action('madara-manga-archive-loop', $index);
 													}
 
 												} else {

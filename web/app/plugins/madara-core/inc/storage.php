@@ -14,7 +14,7 @@
 			add_action( 'wp_manga_daily', array( $this, 'clean_temp_dir' ) );
 
 			add_action( 'wp_manga_upload_after_extract', array( $this, 'flag_upload_start' ), 10, 2 );
-			add_action( 'wp_manga_upload_completed', array( $this, 'flag_upload_end' ), 10, 3 );
+			add_action( 'wp_manga_upload_completed', array( $this, 'flag_upload_end' ), 10, 5 );
 		}
 
 		function mime_content_type( $filename ) {
@@ -80,9 +80,7 @@
 				return $mime_types[ $ext ];
 			} elseif ( function_exists( 'finfo_open' ) ) {
 				$finfo    = finfo_open( FILEINFO_MIME );
-				$mimetype = finfo_file( $finfo, $filename );
-				finfo_close( $finfo );
-
+				$mimetype = @finfo_file( $finfo, $filename );
 				return $mimetype;
 			} else {
 				return 'application/octet-stream';
@@ -132,12 +130,23 @@
 				return false;
 			}
 		}
-
+	
+		/**
+		 * @return 
+				array(
+					'host' => string,
+					'file' => array(string)
+					);
+		**/
 		function local_storage( $uniqid, $c_slug, $extract, $extract_uri, $overwrite = false ) {
 
 			global $wp_manga;
 
 			if ( is_dir( $extract ) ) {
+				$result = array(
+							'host' => '',
+							'file' => array()
+							);
 				if ( $dh = opendir( $extract ) ) {
 					while ( ( $file = readdir( $dh ) ) !== false ) {
 
@@ -167,7 +176,9 @@
 
 				$result = apply_filters( 'manga_upload_chapters_files', $result, $uniqid, 'local' );
 
-				natcasesort( $result['file'] );
+				if(isset($result['file']) && is_array($result['file'])){
+					natcasesort( $result['file'] );
+				}
 
 				return $result;
 			}
@@ -216,10 +227,31 @@
 			return false;
 		}
 
-		function create_chapter( $chapter_args, $result, $storage, $overwrite = false ) {
+		/**
+		 * @params
+				$chapter_args = array(
+			         'post_id'             => int,
+			         'volume_id'           => int,
+			         'chapter_name'        => string,
+			         'chapter_name_extend' => string,
+			         'chapter_slug'        => string,
+			     );
+				 
+				$result = array(
+					'host' => string,
+					'file' => array(string)
+					);
+					
+				$storage = string;
+				
+				$overwrite = boolean;
+				
+			@result Chapter ID (int)
+		**/
+		function create_chapter( $chapter_args, $chapter_images, $storage, $overwrite = false ) {
 
 			global $wp_manga, $wp_manga_chapter;
-
+			
 			$chapter_id = $wp_manga_chapter->insert_chapter( $chapter_args );
 
 			if ( $chapter_id == false ) {
@@ -229,7 +261,7 @@
 			$resp = $this->create_json(
 				$chapter_args['post_id'],
 				$chapter_id,
-				$result,
+				$chapter_images,
 				$storage,
 				$overwrite
 			);
@@ -244,7 +276,7 @@
 
 			// Update chapter row in db
 			$wp_manga_chapter->update_chapter( $chapter_args['update'], $chapter_args['args'] );
-
+			
 			// Update chapter images
 			return $this->create_json( $chapter_args['args']['post_id'], $chapter_args['args']['chapter_id'], $result, $storage, $overwrite, $update = true );
 
@@ -258,16 +290,20 @@
 			global $wp_manga_chapter;
 
 			$data = array();
+			
+			if(isset($result['file']) && is_array($result['file'])){
 
-			foreach ( $result['file'] as $file ) {
-				if ( ! isset( $page ) ) {
-					$page = 1;
+				foreach ( $result['file'] as $file ) {
+					if ( ! isset( $page ) ) {
+						$page = 1;
+					}
+
+					$data[ $page ]['src']  = $file;
+					$data[ $page ]['mime'] = $this->mime_content_type( $file );
+
+					$page ++;
 				}
-
-				$data[ $page ]['src']  = $file;
-				$data[ $page ]['mime'] = $this->mime_content_type( $file );
-
-				$page ++;
+			
 			}
 
 			$data = json_encode( apply_filters( 'madara_chapter_data', $data, $post_id, $chapter_id, $storage ) );
@@ -364,7 +400,6 @@
 		// 3. delete temp folder
 
 		function _storage( $uniqid, $slugified_name, $extract_dir, $extract_uri, $host ) {
-
 			global $wp_manga, $wp_manga_imgur_upload, $wp_manga_flickr_upload, $wp_manga_google_upload, $wp_manga_amazon_upload;
 
 			chmod( $extract_dir, 0777 );
@@ -391,46 +426,68 @@
 							unlink( $extract_dir . '/' . $file );
 						}
 					}
+					
 					closedir( $dh );
 				}
 			}
 
-      		$upload['dir']     = $extract_dir;
+      		$upload['dir']     = rtrim($extract_dir, '/');
 			$upload['uniqid']  = $uniqid;
-			$upload['host']    = $extract_uri;
+			$upload['host']    = trim($extract_uri, '/');
 			$upload['chapter'] = $slugified_name;
 
 			$upload = apply_filters( 'manga_upload_chapters_files', $upload, $uniqid, $host );
 
 			natcasesort( $upload['file'] );
 
-			switch ( $host ) {
+			return $this->upload_cloud( $upload, $host );
+		}
+		
+		/**
+		 * $upload_data - The upload data object array('file' => array(), 'dir' => '', 'uniqid' => '', 'host' => '', 'chapter' => '');
+		 *
+		 * $storage - name of cloud storage
+		 **/
+		function upload_cloud( $upload_data, $storage ){
+			global $wp_manga, $wp_manga_imgur_upload, $wp_manga_flickr_upload, $wp_manga_google_upload, $wp_manga_amazon_upload;
+			switch ( $storage ) {
 				case 'imgur':
-					$data = $wp_manga_imgur_upload->imgur_upload( $upload );
+					$data = $wp_manga_imgur_upload->imgur_upload( $upload_data );
 					break;
 				case 'flickr':
-					$data = $wp_manga_flickr_upload->flickr_upload( $upload );
+					$data = $wp_manga_flickr_upload->flickr_upload( $upload_data );
 					break;
 				case 'picasa':
-					$data = $wp_manga_google_upload->google_upload( $upload );
+					$data = $wp_manga_google_upload->google_upload( $upload_data );
 					break;
 				case 'amazon':
-					$data = $wp_manga_amazon_upload->amazon_upload( $upload );
+					$data = $wp_manga_amazon_upload->amazon_upload( $upload_data );
 					break;
 				default:
-					# code...
+					// support custom storage
+					if(class_exists('wp_manga_storage_' . $storage )){
+						$class = 'wp_manga_storage_' . $storage;
+						$uploader = $class::get_instance();
+						$upload_data = apply_filters('wp_manga_upload_' . $storage . '_params', $upload_data);
+						$data = $uploader->upload( $upload_data );
+					}
+					
 					break;
 			}
+			
+			// if $data is not set, then it should be "unknown storage". We still pass the process, leave it to that "unknown storage" handler.
+			if(isset($data)){
 
-			if ( isset( $data->data->error ) ) {
-				return array( 'error' => 'storage_error', 'message' => $data->data->error->message );
+				if ( !$data || isset( $data->data->error ) || isset($data['error']) ) {
+					return array( 'error' => 'storage_error', 'message' => (!$data ? __('Unknown error', WP_MANGA_TEXTDOMAIN) : (is_array($data) ? $data['error'] : $data->data->error->message)) );
+				}
+			
 			}
 
 			$upload['host'] = '';
-			$upload['file'] = $data;
+			$upload['file'] = isset($data) ? $data : null;
 
 			return $upload;
-
 		}
 
 		function create_volume( $volumeName, $postID ) {
@@ -443,6 +500,49 @@
 			) );
 
 		}
+		
+		function remove_storage( $post_id, $chapter_id, $storage ) {
+			global $wp_manga, $wp_manga_functions, $wp_manga_chapter;
+
+			$chapter_slug = $wp_manga_chapter->get_chapter_slug_by_id( $post_id, $chapter_id );
+
+			$chapter = $wp_manga_functions->get_single_chapter( $post_id, $chapter_id );
+			
+			if ( empty( $chapter ) ) {
+				return __( 'Chapter doesn\'t exists', WP_MANGA_TEXTDOMAIN );
+			}
+			
+			if(count($chapter['storage']) > 2){
+
+				if ( !isset( $chapter['storage'][ $storage ] ) ) {
+					return __( 'Chapter does not exist on this server', WP_MANGA_TEXTDOMAIN );
+				}
+				
+				global $wp_manga_chapter_data;
+				// remove in database
+				$resp = $wp_manga_chapter_data->delete(
+							array(
+								'chapter_id' => $chapter_id,
+								'storage'    => $storage
+							)
+						);
+				
+				// update current storage
+				unset($chapter['storage'][ $storage ]);
+				$key = $value = null;
+				
+				foreach($chapter['storage'] as $key => $value){
+					if($key != 'inUse') break;
+				}
+				
+				$inUse = $key;
+				$wp_manga_chapter->update_chapter(array('storage_in_use' => $inUse), array('chapter_id' => $chapter_id));
+
+				return __( 'Remove successfully!', WP_MANGA_TEXTDOMAIN );
+			} else {
+				return __( 'Cannot remove the last storage', WP_MANGA_TEXTDOMAIN );
+			}
+		}
 
 		function duplicate_server( $post_id, $chapter_id, $duplicate_to ) {
 
@@ -451,6 +551,8 @@
 			$chapter_slug = $wp_manga_chapter->get_chapter_slug_by_id( $post_id, $chapter_id );
 
 			$chapter = $wp_manga_functions->get_single_chapter( $post_id, $chapter_id );
+			
+			$uniqid = $wp_manga->get_uniqid( $post_id );
 
 			if ( empty( $chapter ) ) {
 				return __( 'Chapter doesn\'t exists', WP_MANGA_TEXTDOMAIN );
@@ -471,8 +573,7 @@
 
 				$response = $this->wp_manga_upload_action( $uniqid, $chapter_slug, $chapter_dir, $chapter_uri, $duplicate_to );
 
-			} else {
-
+			} else {				
 				$storage = $chapter['storage'][ $chapter['storage']['inUse'] ];
 
 				$chapter_basedir = $this->get_uniq_dir_slug( $chapter_slug );
@@ -482,10 +583,10 @@
 					$chapter_dir = WP_MANGA_EXTRACT_DIR . $uniqid . '/' . $chapter_basedir . '/';
 					$chapter_uri = WP_MANGA_EXTRACT_URL . $uniqid . '/' . $chapter_basedir . '/';
 				}else{
-					$chapter_dir = WP_MANGA_DATA_DIR . $chapter_basedir;
-					$chapter_uri = WP_MANGA_DATA_URL;
+					$chapter_dir = WP_MANGA_DATA_DIR . $uniqid . '/' . $chapter_basedir . '/' ;
+					$chapter_uri = WP_MANGA_DATA_URL; // not use
 				}
-
+				
 				//pull chapter to local
 				foreach ( $storage['page'] as $page => $file ) {
 					$content   = file_get_contents( $file['src'] );
@@ -495,17 +596,15 @@
 					if ( ! file_exists( $chapter_dir ) ) {
 						wp_mkdir_p( $chapter_dir );
 					}
-
-					file_put_contents( $chapter_dir . $page . '.' . $mime_type[1], $content );
-
-					do_action( 'wp_manga_upload_after_extract', $post_id, $chapter_slug, $chapter_dir, $duplicate_to );
+					
+					file_put_contents( $chapter_dir . $page . '.' . $mime_type[1], $content );					
 				}
 
 				if ( file_exists( $chapter_dir ) || ! empty( glob( $chapter_dir . '/*' ) ) ) {
 
 					$response = $this->wp_manga_upload_action( $uniqid, $chapter_slug, $chapter_dir, $chapter_uri, $duplicate_to );
 
-					do_action( 'wp_manga_upload_completed', $response, $post_id, $chapter_dir, $chapter_uri, $duplicate_to );
+					do_action( 'wp_manga_upload_completed', $chapter_id, $post_id, $chapter_dir, $chapter_uri, $duplicate_to );
 				}
 			}
 
@@ -523,13 +622,18 @@
 
 			} else if ( ! empty( $response ) ) {
 
-				$this->create_json( $post_id, $chapter_id, $response, $duplicate_to );
-
 				if ( strpos( $chapter_dir, 'temp' ) !== false ) {
 					$this->local_remove_storage( $chapter_dir );
 				}
+				
+				if(isset($response['error'])){
+					return $response['message'];
+				} else {
+				
+					$this->create_json( $post_id, $chapter_id, $response, $duplicate_to );
 
-				return __( 'Duplicate successfully!', WP_MANGA_TEXTDOMAIN );
+					return __( 'Duplicate successfully!', WP_MANGA_TEXTDOMAIN );
+				}
 
 			}
 		}
@@ -562,9 +666,11 @@
 
 		function delete_chapter( $post_id, $c_id ) {
 
-			global $wp_manga_chapter;
+			global $wp_manga_chapter, $wp_manga_chapter_data;
 
 			$this->local_delete_chapter_files( $c_id );
+
+			$storages = $wp_manga_chapter_data->get_chapter_storages( $c_id );
 
 			$wp_manga_chapter->delete_chapter( array(
 				'post_id'    => $post_id,
@@ -573,7 +679,8 @@
 
 			do_action( 'manga_chapter_deleted', array(
 				'post_id'    => $post_id,
-				'chapter_id' => $c_id
+				'chapter_id' => $c_id,
+				'storage'    => $storages
 			) );
 
 			return true;
@@ -633,6 +740,7 @@
 			$wp_manga_volume->delete_volume( array(
 				'post_id' => $post_id
 			) );
+			
 			$wp_manga_chapter->delete_chapter( array(
 				'post_id' => $post_id
 			) );
@@ -697,6 +805,10 @@
 			global $wp_manga, $wp_manga_chapter;
 			$uniqid       = $wp_manga->get_uniqid( $post_id );
 			$chapter_slug = $wp_manga_chapter->get_chapter_slug_by_id( $post_id, $chapter_id );
+			
+			if(!file_exists(WP_MANGA_DIR . 'extract')){
+				mkdir(WP_MANGA_DIR . 'extract');
+			}
 
 			$zip = array(
 				'zip_dir'  => WP_MANGA_DIR . 'extract/' . $chapter_slug . '.zip',
@@ -735,26 +847,35 @@
 						}
 					}
 				}
-			}
-
-			if ( $storage == 'imgur' || $storage == 'flickr' || $storage == 'picasa' || $storage == 'amazon' ) {
-
-				global $wp_manga_functions;
-
-				$chapter_data = $wp_manga_functions->get_single_chapter( $post_id, $chapter_id );
-
-				if( !empty( $chapter_data ) && !empty( $chapter_data['data'] ) ){
-
-					$chapter_files = json_decode( $chapter_data['data'], true );
-
-					if( !empty( $chapter_files ) ){
-						foreach ( $chapter_files as $page => $file ) {
-							$file_content = file_get_contents( $file['src'] );
-							$chapter_zip->addFromString( $chapter_slug . '/' . $page . '.jpg', $file_content );
-						}
+			} else {
+				$available_hosts = $wp_manga->get_available_host();
+				// check if $storage is valid
+				$valid = false;
+				foreach($available_hosts as $host){
+					if($host['value'] == $storage){
+						$valid = true;
+						break;
 					}
 				}
+				
+				if ( $valid ) {
 
+					global $wp_manga_functions;
+
+					$chapter_data = $wp_manga_functions->get_single_chapter( $post_id, $chapter_id );
+					
+					if( !empty( $chapter_data ) && !empty( $chapter_data['storage'][$storage] ) ){
+
+						$chapter_files = $chapter_data['storage'][$storage]['page'];
+						if( !empty( $chapter_files ) ){
+							foreach ( $chapter_files as $page => $file ) {
+								$file_content = file_get_contents( $file['src'] );
+								$result = $chapter_zip->addFromString( $chapter_slug . '/' . $page . '.jpg', $file_content );
+							}
+						}
+					}
+
+				}
 			}
 
 			$chapter_zip->close();
@@ -858,7 +979,7 @@
 
 								foreach ( $this_chapter['storage'][ $storage ]['page'] as $page => $file ) {
 									$file_content   = file_get_contents( $file['src'] );
-									$file_extension = pathinfo( $file_path );
+									$file_extension = pathinfo( $file['src'] );
 
 									$manga_zip->addFromString( $chapter_zip_path . '/' . $page . '.' . $file_extension['extension'], $file_content );
 								}
@@ -888,6 +1009,9 @@
 			return false;
 		}
 
+		/**
+		 * @return Chapter ID (int)
+		 **/
 		function wp_manga_upload_single_chapter(
 			$chapter_args,
 			$extract,
@@ -899,7 +1023,7 @@
 			/**
 			 * chapter_args structure
 			 *
-			 * @param chapter_args = array(
+			 * @param $chapter_args = array(
 			 *        'post_id'             => $post_id,
 			 *        'volume_id'           => $volume,
 			 *        'chapter_name'        => $name,
@@ -912,65 +1036,80 @@
 				global $wp_manga, $wp_manga_chapter;
 				$uniqid = $wp_manga->get_uniqid( $chapter_args['post_id'] );
 				$result = $this->wp_manga_upload_action( $uniqid, $chapter_args['chapter_slug'], $extract, $extract_uri, $storage, $overwrite );
-
+				
 				if ( is_wp_error( $result ) || isset( $result['error'] ) || empty( $result ) ) {
+					error_log('wp_manga_upload_action failed: ' . var_export($result, true));
 					return $result;
 				} elseif ( ! empty( $result ) ) {
 
 					if ( $overwrite ) {
 						$chapter_id = $wp_manga_chapter->get_chapter_id_by_slug( $chapter_args['post_id'], $chapter_args['chapter_slug'] );
-
-						$update_args = array(
-							'update' => array(
-								'volume_id'           => $chapter_args['volume_id'],
-								'chapter_name'        => $chapter_args['chapter_name'],
-								'chapter_name_extend' => $chapter_args['chapter_name_extend'],
-								'chapter_slug'        => $chapter_args['chapter_slug'],
-							),
-							'args'   => array(
-								'post_id'    => $chapter_args['post_id'],
-								'chapter_id' => $chapter_id,
-							)
-						);
-
-						$response = $this->update_chapter( $update_args, $result, $storage, $overwrite );
+					
+						if($chapter_id){
+							$update_args = array(
+								'update' => array(
+									'volume_id'           => $chapter_args['volume_id'],
+									'chapter_name'        => $chapter_args['chapter_name'],
+									'chapter_name_extend' => $chapter_args['chapter_name_extend'],
+									'chapter_slug'        => $chapter_args['chapter_slug'],
+									'storage_in_use' => $storage
+								),
+								'args'   => array(
+									'post_id'    => $chapter_args['post_id'],
+									'chapter_id' => $chapter_id,
+								)
+							);
+							
+							$response = $this->update_chapter( $update_args, $result, $storage, $overwrite );
+						} else {
+							error_log('Cannot find Chapter: ' . $chapter_args['post_id'] . ' - ' . $chapter_args['chapter_slug']);
+							return false;
+						}
+						
+						
 					} else {
+						$chapter_args['storage_in_use'] = $storage;
+
 						$chapter_id = $this->create_chapter( $chapter_args, $result, $storage, $overwrite );
+					}
+					
+					// remove tmp folder
+					if($storage != 'local'){
+						wp_manga_delete_dir($extract);
 					}
 
 				}
 
 				return $chapter_id;
+			} else {
+				error_log('Extract folder does not exist: ' . $extract);
 			}
 
 			return false;
 		}
-
+		
+		
+		/**
+		 * @return  
+				array(
+					'host' => string,
+					'file' => array(string)
+					);
+		 **/
 		function wp_manga_upload_action( $uniqid, $c_slug, $extract, $extract_uri, $storage, $overwrite = false ) {
 
 			switch ( $storage ) {
 				case 'local':
 					$result = $this->local_storage( $uniqid, $c_slug, $extract, $extract_uri, $overwrite );
 					break;
-				case 'imgur':
-					$result = $this->_storage( $uniqid, $c_slug, $extract, $extract_uri, 'imgur' );
-					break;
-				case 'flickr':
-					$result = $this->_storage( $uniqid, $c_slug, $extract, $extract_uri, 'flickr' );
-					break;
-				case 'picasa':
-					$result = $this->_storage( $uniqid, $c_slug, $extract, $extract_uri, 'picasa' );
-					break;
-				case 'amazon':
-					$result = $this->_storage( $uniqid, $c_slug, $extract, $extract_uri, 'amazon' );
-					break;
-				default :
-					$result = null;
+				default:
+					$result = $this->_storage( $uniqid, $c_slug, $extract, $extract_uri, $storage );
 					break;
 			}
 
-			return apply_filters( 'wp_manga_upload_action_result', $result, compact( [ 'uniqid', 'c_slug', 'extract', 'extract_uri', 'storage', 'overwrite' ] ) );
-
+			$result = apply_filters( 'wp_manga_upload_action_result', $result, compact( [ 'uniqid', 'c_slug', 'extract', 'extract_uri', 'storage', 'overwrite' ] ) );
+			
+			return $result;
 		}
 
 		function check_storage_limit( $post_id, $slugified_name, $extract, $storage ) {
@@ -1023,9 +1162,9 @@
 				$current_paths = get_transient( 'path_to_clean_' . $uniqid );
 
 				if ( $current_paths == false ) {
-					set_transient( 'path_to_clean_' . $uniqid, array( $extract ) );
+					set_transient( 'path_to_clean_' . $uniqid, array( $extract ), 24 * 60 * 60 );
 				} else {
-					set_transient( 'path_to_clean_' . $uniqid, array_merge( $current_paths, array( $extract ) ) );
+					set_transient( 'path_to_clean_' . $uniqid, array_merge( $current_paths, array( $extract ) ), 24 * 60 * 60 );
 				}
 			}
 
@@ -1035,7 +1174,7 @@
 		 * Handle Manga Upload ( multi chapters )
 		 */
 
-		function manga_upload( $post_id, $manga_zip, $storage ) {
+		function manga_upload( $post_id, $manga_zip, $storage, $volume_id = 0) {
 
 			global $wp_manga_functions, $wp_manga, $wp_manga_volume;
 
@@ -1079,7 +1218,7 @@
 				if ( is_dir( $dir_lv1 ) ) {
 
 					//rename dir to slug name
-					$chapter_slug = $wp_manga_functions->unique_slug( $post_id, basename( $dir_lv1 ) );
+					$chapter_slug = $wp_manga_functions->unique_slug( $post_id, wp_basename( $dir_lv1 ) );
 					$dir_slug_lv1       = $this->get_uniq_dir_slug( $dir_lv1 );
 					$rename_dir_lv1     = $extract . '/' . $dir_slug_lv1;
 					$rename_dir_lv1_uri = $extract_uri . '/' . $dir_slug_lv1;
@@ -1098,7 +1237,7 @@
 						if ( is_dir( $dir_lv2 ) ) {
 
 							//rename dir lv2 to slug
-							$chapter_slug = $wp_manga_functions->unique_slug( $post_id, basename( $dir_lv2 ) );
+							$chapter_slug = $wp_manga_functions->unique_slug( $post_id, wp_basename( $dir_lv2 ) );
 							$dir_slug_lv2   = $this->get_uniq_dir_slug( $dir_lv2 );
 							$rename_dir_lv2 = $rename_dir_lv1 . '/' . $dir_slug_lv2;
 							rename( $dir_lv2, $rename_dir_lv2 );
@@ -1121,21 +1260,30 @@
 							//By now, dir lv1 is volume. Then check if this volume is already existed or create a new one
 							$this_volume = $wp_manga_volume->get_volumes( array(
 								'post_id'     => $post_id,
-								'volume_name' => basename( $dir_lv1 ),
+								'volume_name' => wp_basename( $dir_lv1 ),
 							) );
 
 							if ( $this_volume == false ) {
-								$this_volume = $this->create_volume( basename( $dir_lv1 ), $post_id );
+								$this_volume = $this->create_volume( wp_basename( $dir_lv1 ), $post_id );
 							} else {
 								$this_volume = $this_volume[0]['volume_id'];
 							}
 
 							//upload each chapter dir
-							$result[ basename( $dir_lv2 ) ] = $this->wp_manga_upload_single_chapter( array(
+							$chapter_name = wp_basename( $dir_lv2 );
+							$chapter_name_extend = '';
+							
+							$name_parts = explode('--',$chapter_name);
+							if(count($name_parts) == 2){
+								$chapter_name = trim($name_parts[0]);
+								$chapter_name_extend = trim($name_parts[1]);
+							}
+							
+							$result[ $chapter_name ] = $this->wp_manga_upload_single_chapter( array(
 								'post_id'             => $post_id,
 								'volume_id'           => $this_volume,
-								'chapter_name'        => basename( $dir_lv2 ),
-								'chapter_name_extend' => '',
+								'chapter_name'        => $chapter_name,
+								'chapter_name_extend' => $chapter_name_extend,
 								'chapter_slug'        => $chapter_slug
 							), $chapter_path, $extract_uri_final, //$chapter_uri
 								$storage );
@@ -1156,12 +1304,21 @@
 							$chapter_path      = $extract . '/' . $dir_slug_lv1;
 							$extract_uri_final = $rename_dir_lv1_uri;
 						}
+						
+						$chapter_name = wp_basename( $dir_lv1 );
+						$chapter_name_extend = '';
+						
+						$name_parts = explode('--',$chapter_name);
+						if(count($name_parts) == 2){
+							$chapter_name = trim($name_parts[0]);
+							$chapter_name_extend = trim($name_parts[1]);
+						}
 
-						$result[ basename( $dir_lv1 ) ] = $this->wp_manga_upload_single_chapter( array(
+						$result[ $chapter_name ] = $this->wp_manga_upload_single_chapter( array(
 							'post_id'             => $post_id,
-							'volume_id'           => 0,
-							'chapter_name'        => basename( $dir_lv1 ),
-							'chapter_name_extend' => '',
+							'volume_id'           => $volume_id,
+							'chapter_name'        => $chapter_name,
+							'chapter_name_extend' => $chapter_name_extend,
 							'chapter_slug'        => $chapter_slug,
 						), $chapter_path, $extract_uri_final, $storage );
 
@@ -1194,7 +1351,7 @@
 
 		}
 
-		function flag_upload_end( $result, $post_id, $extract ) {
+		function flag_upload_end( $result, $post_id, $extract, $extract_uri, $storage ) {
 
 			if ( strpos( $extract, WP_MANGA_EXTRACT_DIR ) !== false ) {
 				delete_transient( 'temp_dir_uploading' );

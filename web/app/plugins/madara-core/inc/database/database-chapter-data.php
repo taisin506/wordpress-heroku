@@ -1,6 +1,7 @@
 <?php
 
 	class WP_DB_CHAPTER_DATA extends WP_MANGA_DATABASE {
+        public $_chapter_data = array();
 
 		public function __construct() {
 
@@ -8,8 +9,6 @@
 
 			$this->table = $this->get_wpdb()->prefix . 'manga_chapters_data';
             $this->chapter_table = $this->get_wpdb()->prefix . 'manga_chapters';
-
-            add_action( 'chapter_deleted', array( $this, 'delete_chapter_data' ) );
 
 		}
 
@@ -20,6 +19,11 @@
 			if(empty($post_id)){
 				return false;
 			}
+            
+            if(isset($this->_chapter_data[$post_id])){
+                return $this->_chapter_data[$post_id];
+            }
+            
 			$results = $this->select( array( 'post_id' => $post_id ) );
 
 			if( !empty( $results ) ){
@@ -50,6 +54,8 @@
 				}
 
 				if( !empty( $output ) ){
+                    $this->_chapter_data[$post_id] = $output;
+                    
 					return $output;
 				}
 			}
@@ -67,13 +73,61 @@
 				'chapter_id' => $chapter_id,
 				'post_id'    => $post_id
 			) );
-
 			if( !empty( $results ) ){
 				$output = array();
 
 				foreach( $results as $storage ){
+					
 
 					$pages = json_decode( $storage['data'], true );
+					
+					$validate_pages = array();
+					// flag to check if we need to update images link (for google photos)
+					$need_update = false;
+					$pages_clone = $pages;
+					
+					foreach($pages as $key => $link){
+						// exception: Google Photos
+						if(strpos($link['src'], 'googleusercontent.com')){
+							// check if link expired (Google Photos link expires every 60 minutes)
+							
+							if($pos = strpos($link['src'], '#')){
+								$data = substr($link['src'], $pos + 1);
+								
+								$pos = strrpos($data,'-');
+								$item_id = substr($data, 0, $pos);
+								$timestamp = substr($data, $pos + 1);
+								
+								// every 55 minutes, we get new links
+								if(intval($timestamp) + 61 * 60 < time()){ 
+									$gphoto_storage = wp_manga_storage_gphotos::get_instance();
+									$update_url = $gphoto_storage->get_item_URL($item_id);
+									
+									// save database
+									$link['src'] = $update_url;
+									$pages_clone[$key] = $link;
+									$need_update = true;
+								}
+							}
+							array_push($validate_pages, $link);	
+						} else {
+							if(pathinfo($link['src'], PATHINFO_EXTENSION) != '') {						
+								array_push($validate_pages, $link);				
+							}		
+						}						
+					}
+					
+					$storage_clone = array();
+					$storage_clone['chapter_id'] = $storage['chapter_id'];
+					$storage_clone['storage'] = $storage['storage'];
+					$storage_clone['data'] = json_encode($pages_clone);
+					if($need_update){
+						global $wp_manga_database;
+						
+						$wp_manga_database->update($this->table, $storage_clone, array('data_id' => $storage['data_id']));
+					}
+					
+					$pages = $validate_pages;
 
 					if( ! isset( $output[ 'total_page' ] ) ){
 						$output[ 'total_page' ] = apply_filters( 'manga_chapter_data_total_page', count( $pages ), $pages, $chapter_id, $post_id );
@@ -84,6 +138,8 @@
 					}
 
 					if( !empty( $pages ) ){
+						$pages = apply_filters('wp_manga_chapter_images_data', $pages);
+						
 						$output['storage'][ $storage['storage'] ] = array(
 							'host' => $storage['storage'] === 'local' ? WP_MANGA_DATA_URL : '',
 							'page' => $pages,
@@ -122,6 +178,31 @@
 
 			return false;
 
+		}
+
+		/**
+		 * Return chapter available storages with its data
+		 */
+		function get_chapter_storages( $chapter_id ){
+			$results = $this->select(
+				array(
+					'chapter_id' => $chapter_id,
+				),
+				array(
+					'storage',
+					'data'
+				)
+			);
+
+			if( !empty( $results ) ){
+				$output = array();
+				foreach( $results as $result ){
+					$output[ $result['storage'] ] = json_decode( $result['data'], true );
+				}
+				return $output;
+			}
+
+			return false;
 		}
 
 		/**
@@ -172,6 +253,9 @@
 						FROM {$this->chapter_table} as C
 						JOIN {$this->table} as D
 						ON D.chapter_id = C.chapter_id";
+				if( !empty( $sql_where ) && strpos($sql_where, '.chapter_id') === false){
+					$sql_where = str_replace('chapter_id', 'C.chapter_id', $sql_where);
+				}
 			}else{
 				$sql = "SELECT {$selects}
 						FROM {$this->table}";
@@ -261,7 +345,7 @@
                 return $this->get_wpdb()->query(
                     $this->get_wpdb()->prepare(
                         "DELETE {$this->table}
-                        FROM {$this->table} as D
+						FROM {$this->table} as D
                         JOIN {$this->chapter_table} as C
                         ON D.chapter_id = C.chapter_id
                         WHERE C.post_id = %d",

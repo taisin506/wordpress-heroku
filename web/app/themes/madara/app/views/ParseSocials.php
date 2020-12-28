@@ -52,7 +52,7 @@
 
 					$html .= "<li>";
 
-					$html .= '<a class="' . esc_attr( $social_class ) . '" target="' . esc_attr( $target ) . '" href="' . esc_url( $social_url ) . '" title="' . esc_attr( $label ) . '">';
+					$html .= '<a class="' . esc_attr( $social_class ) . '" target="' . esc_attr( $target ) . '" '. ($target == '_blank' ? 'rel="noopener"' : '') .' href="' . esc_url( $social_url ) . '" title="' . esc_attr( $label ) . '">';
 
 					$html .= '<i class="' . $icon_prefix . ' fa-' . esc_attr( $key ) . '" aria-hidden="true"></i>';
 
@@ -73,7 +73,7 @@
 					$html .= "<li " . ( ( isset( $show_class ) && $show_class == true ) ? 'class="custom-' . esc_attr( $value['icon_custom_social_account'] ) . '"' : '' ) . ">";
 
 
-					$html .= '<a class="' . esc_attr( $custom_accounts_class ) . '" target="' . esc_attr( $target ) . '" href="' . esc_url( $value["url_custom_social_account"] ) . '" title="' . esc_attr( $value["title"] ) . '">';
+					$html .= '<a class="' . esc_attr( $custom_accounts_class ) . '" target="' . esc_attr( $target ) . '" '. ($target == '_blank' ? 'rel="noopener"' : '') .' href="' . esc_url( $value["url_custom_social_account"] ) . '" title="' . esc_attr( $value["title"] ) . '">';
 
 
 					$html .= '<i class="' . esc_attr( $value["icon_custom_social_account"] ) . '" aria-hidden="true"></i>';

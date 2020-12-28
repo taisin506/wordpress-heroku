@@ -6,7 +6,7 @@
 
 	global $wp_manga_template;
 
-	$tab_pane = isset( $_POST['tab-pane'] ) ? $_POST['tab-pane'] : 'boomarks';
+	$tab_pane = isset( $_POST['tab-pane'] ) ? $_POST['tab-pane'] : 'bookmark';
 
 ?>
 <div class="wp-manga-section">
@@ -14,11 +14,11 @@
 	    <div class="col-md-3 col-sm-3">
 	        <div class="nav-tabs-wrap">
 	            <ul class="nav nav-tabs">
-	                <li class="<?php echo ( $tab_pane == 'boomarks' ) ? 'active' : ''; ?>">
-	                    <a href="#boomarks" data-toggle="tab"><i class="ion-android-bookmark"></i><?php esc_html_e( 'Bookmarks', WP_MANGA_TEXTDOMAIN ); ?>
+	                <li class="<?php echo ( $tab_pane == 'bookmark' ) ? 'active' : ''; ?>">
+	                    <a href="#boomarks" data-toggle="tab"><i class="icon ion-android-bookmark"></i><?php esc_html_e( 'Bookmarks', WP_MANGA_TEXTDOMAIN ); ?>
 	                    </a></li>
 	                <li class="<?php echo ( $tab_pane == 'reader' ) ? 'active' : ''; ?>">
-	                    <a href="#reader" data-toggle="tab"><i class="ion-gear-b"></i><?php esc_html_e( 'Reader Settings', WP_MANGA_TEXTDOMAIN ); ?>
+	                    <a href="#reader" data-toggle="tab"><i class="icon ion-gear-b"></i><?php esc_html_e( 'Reader Settings', WP_MANGA_TEXTDOMAIN ); ?>
 	                    </a></li>
 	            </ul>
 	        </div>
@@ -26,7 +26,7 @@
 	    <div class="col-md-9 col-sm-9">
 	        <div class="tabs-content-wrap">
 	            <div class="tab-content">
-	                <div class="tab-pane <?php echo ( $tab_pane == 'boomarks' ) ? 'active' : ''; ?>" id="boomarks">
+	                <div class="tab-pane <?php echo ( $tab_pane == 'bookmark' ) ? 'active' : ''; ?>" id="boomarks">
 						<?php $wp_manga_template->load_template( 'user/page/bookmark' ); ?>
 	                </div>
 	                <div class="tab-pane <?php echo $tab_pane == 'reader' ? 'active' : ''; ?>" id="reader">

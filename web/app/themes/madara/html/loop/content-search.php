@@ -62,7 +62,7 @@
         <div class="col-12 c-column">
             <footer class="entry-footer">
                 <div class="entry-readmore float-left">
-                    <a class="item-readmore btn btn-default btn-custom small" href="<?php the_permalink(); ?>" title="<?php the_title_attribute(); ?>"><i class="ion-ios-plus-outline"></i>
+                    <a class="item-readmore btn btn-default btn-custom small" href="<?php the_permalink(); ?>" title="<?php the_title_attribute(); ?>"><i class="icon ion-ios-plus-outline"></i>
                         <span><?php esc_html_e( 'Read more', 'madara' ); ?></span> </a>
                 </div>
             </footer>

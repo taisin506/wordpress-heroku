@@ -6,23 +6,27 @@
 	$madara_postMeta       = new App\Views\ParseMeta();
 	$madara_showtags       = \App\Madara::getOption( 'single_tags', 'on' );
 	$madara_page_meta_tags = \App\Madara::getOption( 'page_meta_tags', 'on' );
+	$madara_page_title = \App\Madara::getOption( 'page_title', 'on' );
 	$thumb_size            = 'full';
 ?>
 
 
 <div id="post-<?php the_ID(); ?>" <?php post_class( 'c-blog-post' ); ?>>
-
+	<?php if($madara_page_title == 'on' || $madara_page_meta_tags == 'on'){?>
     <div class="entry-header">
         <div class="entry-header_wrap">
+			<?php if($madara_page_title == 'on'){?>
             <div class="entry-title">
-                <h2 class="item-title"><?php the_title(); ?></h2>
+                <h1 class="item-title h2"><?php the_title(); ?></h1>
             </div>
+			<?php } ?>
 
 			<?php if ( $madara_page_meta_tags == 'on' ) {
 				$madara_postMeta->renderPostMeta();
 			} ?>
         </div>
     </div>
+	<?php } ?>
 
 	<?php if ( has_excerpt() ) { ?>
         <div class="c-blog__excerpt">

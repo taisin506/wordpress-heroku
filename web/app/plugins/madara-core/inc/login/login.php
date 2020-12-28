@@ -53,6 +53,19 @@
 			wp_localize_script( 'wp-manga-login-ajax', 'wpMangaLogin', array(
 				'admin_ajax' => admin_url( 'admin-ajax.php' ),
 				'home_url'   => get_home_url(),
+				'messages' => array(
+					'please_enter_username' => esc_html__('Please enter username', WP_MANGA_TEXTDOMAIN),
+					'please_enter_password' => esc_html__('Please enter password', WP_MANGA_TEXTDOMAIN),
+					'invalid_username_or_password' => esc_html__('Invalid username or password', WP_MANGA_TEXTDOMAIN),
+					'server_error' => esc_html__('Server Error!', WP_MANGA_TEXTDOMAIN),
+					'username_or_email_cannot_be_empty' => esc_html__('Username or Email cannot be empty', WP_MANGA_TEXTDOMAIN),
+					'please_fill_all_fields' => esc_html__('Please fill in all password fields.', WP_MANGA_TEXTDOMAIN),
+					'password_cannot_less_than_12' => esc_html__('Password cannot has less than 12 characters', WP_MANGA_TEXTDOMAIN),
+					'password_doesnot_match' => esc_html__('Password doesn\'t match. Please  try again.', WP_MANGA_TEXTDOMAIN),
+					'username_cannot_empty' => esc_html__('Username cannot be empty', WP_MANGA_TEXTDOMAIN),
+					'email_cannot_empty' => esc_html__('Email cannot be empty', WP_MANGA_TEXTDOMAIN),
+					'password_cannot_empty' => esc_html__('Password cannot be empty', WP_MANGA_TEXTDOMAIN),
+				)
 			) );
 		}
 
@@ -111,7 +124,11 @@
 				$user_data['user_login'] = trim( $_POST['user_login'] );
 				$user_data['user_pass']  = trim( $_POST['user_pass'] );
 				$user_data['user_email'] = trim( $_POST['user_email'] );
-				$user_data['role']       = 'subscriber';
+				$user_data['role']       = get_option('default_role','subscriber');
+
+				if( strlen( $user_data['user_pass'] ) < 6 ){
+					return wp_send_json_error( __( 'Password must have at least 6 characters.', WP_MANGA_TEXTDOMAIN ) );
+				}
 
 				$user_id = wp_insert_user( $user_data );
 
@@ -119,7 +136,7 @@
 					wp_send_json_error( strip_tags( $user_id->get_error_message() ) );
 				} else {
 
-					wp_new_user_notification( $user_id, null, 'both' );
+					do_action( 'register_new_user', $user_id );
 
 					wp_send_json_success( __( 'Registration successfully! You can login now.', WP_MANGA_TEXTDOMAIN ) );
 				}
@@ -183,7 +200,7 @@
 		function retrieve_password( $user_login ){
 
 			if( $this->is_valid_email( $user_login ) ){
-				$user_data = get_user_by_email( $user_login );
+				$user_data = get_user_by('email', $user_login );
 			}else{
 				$user_data = get_user_by( 'login', $user_login );
 			}
@@ -275,7 +292,7 @@
 					wp_send_json_error( __( 'Invalid password requested', WP_MANGA_TEXTDOMAIN ) );
 				}
 				if( $this->is_valid_email( $user_login ) ){
-					$user_data = get_user_by_email( $user_login );
+					$user_data = get_user_by('email', $user_login );
 				}else{
 					$user_data = get_user_by( 'login', $user_login );
 				}

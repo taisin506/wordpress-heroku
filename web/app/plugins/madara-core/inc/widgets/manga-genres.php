@@ -71,7 +71,7 @@ class Manga_Genres_Widget extends WP_Widget {
                                     <?php
                                     foreach( $genres as $genre ) {
                                         ?>
-                                        <li class="<?php echo $layout == 'layout-2' ? 'col-xs-6 col-sm-4 col-md-2' : 'col-xs-6 col-sm-6'; ?>">
+                                        <li class="<?php echo $layout == 'layout-2' ? 'col-xs-6 col-sm-4 col-md-3 col-lg-2 col-6' : 'col-xs-6 col-sm-6'; ?>">
                                             <a href="<?php echo esc_url( get_term_link( $genre ) ); ?>">
                                                 <?php echo esc_html( $genre->name ); ?>
                                                 <?php

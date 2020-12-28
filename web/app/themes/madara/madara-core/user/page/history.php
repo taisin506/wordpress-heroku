@@ -71,14 +71,16 @@
 											<?php echo esc_html( $chapter['chapter_name'] ); ?>
 										</a>
 									</span>
-								<?php if ( ! empty( $this_history_manga['p'] ) && $reading_style == 'paged' ) {
+								<?php 
+								global $wp_manga;
+								if ( ! empty( $this_history_manga['p'] ) && $reading_style == 'paged' ) {
 									$p_url = add_query_arg( array(
 										$wp_manga->manga_paged_var => $this_history_manga['p']
 									), $c_url ); ?>
 
 									<span class="page">
 										<a href="<?php echo esc_url( $p_url ); ?>">
-											page <?php echo esc_html( $this_history_manga['p'] ); ?>
+											<?php echo sprintf(esc_html__('page %d', 'madara'), $this_history_manga['p']);?> 
 										</a>
 									</span>
 								<?php } ?>
@@ -89,7 +91,7 @@
 						</div>
 					</div>
 					<div class="action">
-						<a href="javascript:void(0)" class="remove-manga-history" data-manga="<?php echo esc_attr( $id ); ?>"><i class="ion-ios-close"></i></a>
+						<a href="javascript:void(0)" class="remove-manga-history" data-manga="<?php echo esc_attr( $id ); ?>"><i class="icon ion-ios-close"></i></a>
 					</div>
 				</div>
 			</div>

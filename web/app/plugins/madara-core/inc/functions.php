@@ -13,12 +13,12 @@
 			// All Mangas are cached 24 hours
 			$all_mangas = get_transient('wp_manga_all_mangas');
 			if(!$all_mangas){
-				$all_mangas = $this->get_mangas( '_wp_manga_views' );
+				$all_mangas = $this->get_mangas( '_wp_manga_views', 100 );
 				set_transient('wp_manga_all_mangas', $all_mangas, 60 * 60 * 24);
 			}
 			$this->manga_by_views = $all_mangas;
 			
-			add_action( 'after_manga_single', array( $this, 'update_manga_views' ) );
+			add_filter( 'upload_mimes', array ($this, 'upload_mime_types'), 1, 1 );
 		}
 
 		function get_latest_chapters(
@@ -37,8 +37,8 @@
 			global $wp_manga_chapter;
 
 			$chapters = $wp_manga_chapter->get_latest_chapters( $post_id, $q, $num, $all_meta, $orderby, $order );
-
-			return $chapters;
+			
+			return apply_filters('wp_manga_latest_chapters', $chapters, $post_id, $q, $num, $all_meta, $orderby, $order);
 
 		}
 
@@ -77,11 +77,11 @@
 		}
 
 		// get all mangas. This is used to calculate manga rank. It consumes a lot of memory
-		function get_mangas( $meta_key = null ) {
+		function get_mangas( $meta_key = null, $post_per_page = -1 ) {
 
 			$args = array(
 				'post_type'      => 'wp-manga',
-				'posts_per_page' => - 1,
+				'posts_per_page' => $post_per_page,
 				'post_status'    => 'publish',
 			);
 			if ( $meta_key ) {
@@ -109,23 +109,30 @@
 			}
 
 			$rank      = array_search( $post_id, $arr );
-			$true_rank = $rank + 1;
-			$string    = $true_rank;
-			$tail      = substr( $true_rank, - 1 );
+			if($rank !== false){
+				$true_rank = $rank + 1;
+				$string    = $true_rank;
+				$tail      = substr( $true_rank, - 1 );
 
-			if ( $tail == 1 && $true_rank != 11) {
-				$string = sprintf(esc_html__('%dst', WP_MANGA_TEXTDOMAIN), $true_rank);
-			} elseif ( $tail == 2 && $true_rank != 12 ) {
-				$string = sprintf(esc_html__('%dnd', WP_MANGA_TEXTDOMAIN), $true_rank);
-			} elseif ( $tail == 3 && $true_rank != 13 ) {
-				$string = sprintf(esc_html__('%drd', WP_MANGA_TEXTDOMAIN), $true_rank);
+				if ( $tail == 1 && $true_rank != 11) {
+					$string = sprintf(esc_html__('%dst', WP_MANGA_TEXTDOMAIN), $true_rank);
+				} elseif ( $tail == 2 && $true_rank != 12 ) {
+					$string = sprintf(esc_html__('%dnd', WP_MANGA_TEXTDOMAIN), $true_rank);
+				} elseif ( $tail == 3 && $true_rank != 13 ) {
+					$string = sprintf(esc_html__('%drd', WP_MANGA_TEXTDOMAIN), $true_rank);
+				} else {
+					$string = sprintf(esc_html__('%dth', WP_MANGA_TEXTDOMAIN), $true_rank);
+				}
+
+				return $string;
 			} else {
-				$string = sprintf(esc_html__('%dth', WP_MANGA_TEXTDOMAIN), $true_rank);
+				return esc_html__('N/A', WP_MANGA_TEXTDOMAIN);
 			}
-
-			return $string;
 		}
 
+		/**
+		 * Get average rating for a manga 
+		 **/
 		function get_total_review( $post_id, $reviews = array() ) {
 
 			if ( ! $post_id || $post_id == '' ) {
@@ -149,7 +156,10 @@
 
 			return $total;
 		}
-
+		
+		/**
+		 * Get number of ratings
+		 **/
 		function get_total_vote( $post_id ) {
 
 			if ( ! $post_id || $post_id == '' ) {
@@ -161,8 +171,14 @@
 			if ( $reviews == false ) {
 				return false;
 			}
+			
+			$total_votes = count( $reviews );
+			$total_votes = get_post_meta( $post_id, '_manga_total_votes', true );
+			if($total_votes != count($reviews)){
+				update_post_meta($post_id, '_manga_total_votes', count($reviews));
+			}
 
-			return count( $reviews );
+			return wp_manga_number_format_short(count($reviews));
 
 		}
 
@@ -188,9 +204,12 @@
 		}
 
 		function manga_rating_display( $post_id = '', $is_manga_single = false ) {
-
-			echo $this->manga_rating( $post_id, $is_manga_single );
-
+			$wp_manga_settings = get_option( 'wp_manga_settings' );
+			$user_rate = isset( $wp_manga_settings['user_rating'] ) ? $wp_manga_settings['user_rating'] : 1;
+			
+			if($user_rate){
+				echo $this->manga_rating( $post_id, $is_manga_single );
+			}
 		}
 
 		function manga_rating( $post_id = '', $is_manga_single = false ) {
@@ -202,21 +221,32 @@
 			$html        = '';
 			$post_rating = get_post_meta( $post_id, '_manga_avarage_reviews', true );
 			$all_reviews = get_post_meta( $post_id, '_manga_reviews', true );
-
-			if ( is_user_logged_in() ) {
+            $logged_in = is_user_logged_in();
+            
+			if ( $logged_in ) {
 				$user_rating = isset( $all_reviews[ get_current_user_id() ] ) ? $all_reviews[ get_current_user_id() ] : '';
 			} else {
 				$user_rating = isset( $all_reviews[ $this->get_client_ip() ] ) ? $all_reviews[ $this->get_client_ip() ] : '';
 			}
+            
+            global $wp_manga_setting;
+                
+            $guest_rating = $wp_manga_setting->get_manga_option( 'guest_rating', 1 );
+            
+            $class_toggle = 'allow_vote';
+            if(!$guest_rating && !$logged_in){
+                // if not allow guest rating, and user is not logged in
+                $class_toggle = '';
+            }
 
 			//post total rating
-			$html .= '<div class="post-total-rating">';
+			$html .= '<div class="post-total-rating ' . $class_toggle . '">';
 			$html .= $this->manga_output_rating( $post_rating );
 			$html .= '</div>';
 
 			//user rating
 			if ( $is_manga_single ) {
-				$html .= '<div class="user-rating">';
+				$html .= '<div class="user-rating ' . $class_toggle . '">';
 				$html .= $this->manga_output_rating( $user_rating, true );
 				$html .= '</div>';
 
@@ -243,8 +273,14 @@
 			} else {
 				$rate = round( $rate, 1, PHP_ROUND_HALF_UP );
 				for ( $i = 0; $i < $max_rate; $i ++ ) {
-					if ( ( substr( $rate, 0, 1 ) == $i ) && ( 3 <= substr( $rate, - 1 ) ) && ( substr( $rate, - 1 ) <= 7 ) ) {
-						$html .= '<i class="ion-ios-star-half ratings_stars rating_current_half"></i>';
+					if( substr( $rate, 0, 1 ) == $i ) {
+						if( 3 > substr( $rate, - 1 ) ){
+							$html .= '<i class="ion-ios-star-outline ratings_stars"></i>';
+						} elseif ( ( 3 <= substr( $rate, - 1 ) ) && ( substr( $rate, - 1 ) <= 7 ) ){
+							$html .= '<i class="ion-ios-star-half ratings_stars rating_current_half"></i>';
+						} else {
+							$html .= '<i class="ion-ios-star ratings_stars rating_current"></i>';
+						}
 					} elseif ( $i < $rate ) {
 						$html .= '<i class="ion-ios-star ratings_stars rating_current"></i>';
 					} else {
@@ -262,29 +298,29 @@
 			return $html;
 		}
 
-		function update_manga_views( $post_id ) {
+		function update_manga_views( $manga_id, $chapter_slug = '' ) {
 
-			if ( ! $post_id || $post_id == '' ) {
-				$post_id = get_the_ID();
-			}
-
-			$manga_views = get_post_meta( $post_id, '_wp_manga_views', true );
+			$manga_views = get_post_meta( $manga_id, '_wp_manga_views', true );
 
 			$day   = date( 'd' );
 			$month = date( 'm' );
 			$year  = date( 'y' );
 
 			// day views
-			$day_views = get_post_meta( $post_id, '_wp_manga_day_views', true );
+			$day_views = get_post_meta( $manga_id, '_wp_manga_day_views', true );
 			$d_views   = isset( $day_views['views'] ) ? $day_views['views'] : 0;
 			$d_date    = isset( $day_views['date'] ) ? $day_views['date'] : $day;
 			if ( $d_date != $day ) {
 				$d_views = 1;
 			} else {
-				$d_views ++;
+				$d_views++;
 			}
-			$new_day_views = array( 'views' => $d_views, 'date' => $d_date );
-			update_post_meta( $post_id, '_wp_manga_day_views', $new_day_views, $day_views );
+			
+
+			$new_day_views = array( 'views' => $d_views, 'date' => $day );
+			
+			update_post_meta( $manga_id, '_wp_manga_day_views', $new_day_views, $day_views );
+			update_post_meta( $manga_id, '_wp_manga_day_views_value', $d_views); // clone to sort by value
 
 			// week views
 
@@ -318,7 +354,7 @@
 					break;
 			}
 			$current_week_day = date( 'D-d' );
-			$week_views       = get_post_meta( $post_id, '_wp_manga_week_views', true );
+			$week_views       = get_post_meta( $manga_id, '_wp_manga_week_views', true );
 			$w_views          = isset( $week_views['views'] ) ? $week_views['views'] : 0;
 			$w_date           = isset( $week_views['day'] ) ? $week_views['day'] : $current_week_day;
 			if ( $w_date != $current_week_day && substr( $w_date, 0, 3 ) == $day ) {
@@ -326,12 +362,12 @@
 			} else {
 				$w_views ++;
 			}
-
 			$new_week_views = array( 'views' => $w_views, 'date' => $current_week_day );
-			update_post_meta( $post_id, '_wp_manga_week_views', $new_week_views, $week_views );
+			update_post_meta( $manga_id, '_wp_manga_week_views', $new_week_views, $week_views );
+			update_post_meta( $manga_id, '_wp_manga_week_views_value', $w_views ); // clone to sort by value
 
 			// month views
-			$month_views = get_post_meta( $post_id, '_wp_manga_month_views', true );
+			$month_views = get_post_meta( $manga_id, '_wp_manga_month_views', true );
 			$m_views     = isset( $month_views['views'] ) ? $month_views['views'] : 0;
 			$m_date      = isset( $month_views['month'] ) ? $month_views['month'] : $month;
 			if ( $m_date != $month ) {
@@ -339,11 +375,12 @@
 			} else {
 				$m_views ++;
 			}
-			$new_month_views = array( 'views' => $m_views, 'date' => $m_date );
-			update_post_meta( $post_id, '_wp_manga_month_views', $new_month_views, $month_views );
+			$new_month_views = array( 'views' => $m_views, 'month' => $month );
+			update_post_meta( $manga_id, '_wp_manga_month_views', $new_month_views, $month_views );
+			update_post_meta( $manga_id, '_wp_manga_month_views_value', $m_views ); // clone to sort by value
 
 			// year views
-			$year_views = get_post_meta( $post_id, '_wp_manga_year_views', true );
+			$year_views = get_post_meta( $manga_id, '_wp_manga_year_views', true );
 			$y_views    = isset( $year_views['views'] ) ? $year_views['views'] : 0;
 			$y_date     = isset( $year_views['date'] ) ? $year_views['date'] : $year;
 			if ( $y_date != $year ) {
@@ -351,10 +388,20 @@
 			} else {
 				$y_views ++;
 			}
-			$new_year_views = array( 'views' => $y_views, 'date' => $y_date );
-			update_post_meta( $post_id, '_wp_manga_year_views', $new_year_views, $year_views );
+			
+			$new_year_views = array( 'views' => $y_views, 'date' => $year );
+			update_post_meta( $manga_id, '_wp_manga_year_views', $new_year_views, $year_views );
+			update_post_meta( $manga_id, '_wp_manga_year_views_value', $y_views ); // clone to sort by value
 
-			update_post_meta( $post_id, '_wp_manga_views', ++ $manga_views );
+			update_post_meta( $manga_id, '_wp_manga_views', ++ $manga_views );
+		}
+		
+		function print_ranking_views( $manga_id ) {
+			
+			$rank        = $this->get_manga_rank( $manga_id );
+			$views       = $this->get_manga_monthly_views( $manga_id );
+			
+			echo apply_filters('madara_manga_ranking_views', sprintf( _n( ' %1s, it has %2s monthly view', ' %1s, it has %2s monthly views', $views, WP_MANGA_TEXTDOMAIN ), $rank, $views ), $manga_id, $rank, $views);
 		}
 
 		function get_manga_monthly_views( $post_id ) {
@@ -365,7 +412,7 @@
 
 			$m_views = isset( $month_views['views'] ) ? $month_views['views'] : 0;
 
-			return $m_views;
+			return wp_manga_number_format_short($m_views);
 		}
 
 		function get_manga_status( $post_id ) {
@@ -377,18 +424,20 @@
 			$status = get_post_meta( $post_id, '_wp_manga_status', true );
 
 			$val = isset( $status ) ? $status : 'on-going';
-
+			
+			$string = esc_html__( 'Completed', WP_MANGA_TEXTDOMAIN );
+			
 			if ( 'on-going' == $val ) {
 				$string = esc_html__( 'OnGoing', WP_MANGA_TEXTDOMAIN );
 			} else if ( 'canceled' == $val ) {
 				$string = esc_html__( 'Canceled', WP_MANGA_TEXTDOMAIN );
 			} else if ( 'on-hold' == $val ) {
 				$string = esc_html__( 'On Hold', WP_MANGA_TEXTDOMAIN );
-			} else {
-				$string = esc_html__( 'Completed', WP_MANGA_TEXTDOMAIN );
+			} else if ( 'upcoming' == $val ) {
+				$string = esc_html__( 'Upcoming', WP_MANGA_TEXTDOMAIN );
 			}
 
-			return $string;
+			return apply_filters('wp_manga_manga_status', $string, $post_id);
 		}
 
 		function get_manga_alternative( $post_id ) {
@@ -423,7 +472,7 @@
 			return apply_filters( 'wp_manga_info_filter', $releases );
 		}
 
-		function get_manga_authors( $post_id ) {
+		function get_manga_authors( $post_id = '' ) {
 
 			if ( ! $post_id || $post_id == '' ) {
 				$post_id = get_the_ID();
@@ -451,13 +500,14 @@
 				$post_id = get_the_ID();
 			}
 
-			$genres = get_the_term_list( $post_id, 'wp-manga-genre', '', ',', '' );
+			$genres = get_the_term_list( $post_id, 'wp-manga-genre', '', ', ', '' );
 
 			return apply_filters( 'wp_manga_info_filter', $genres );
 
 		}
 
 		function prepare_archive_posts( $args = array() ) {
+			
 			if ( is_post_type_archive( 'wp-manga' ) || is_tax( 'wp-manga-author' ) || is_tax( 'wp-manga-artist' ) || is_tax( 'wp-manga-genre' ) && ! is_admin() ) {
 
 				global $wp_query;
@@ -503,6 +553,8 @@
 						'field'    => 'slug'
 					);
 				}
+				
+				$meta_query = array();
 
 				if ( $orderby ) {
 					switch ( $orderby ) {
@@ -515,8 +567,14 @@
 							$query['order']   = 'ASC';
 							break;
 						case 'rating':
+							$meta_query['query_avarage_reviews'] = array(
+														'key' => '_manga_avarage_reviews'
+													); 
+							$meta_query['query_total_reviews'] = array(
+																'key' => '_manga_total_votes'
+															); 
+							$query['order']  = array('query_avarage_reviews' => 'DESC', 'query_total_reviews' => 'DESC');
 							$query['orderby']  = 'meta_value_num';
-							$query['meta_key'] = '_manga_avarage_reviews';
 							break;
 						case 'trending':
 							$query['orderby']  = 'meta_value_num';
@@ -539,6 +597,9 @@
 
 
 				$query = wp_parse_args( $args, $query );
+				
+				$query['meta_query'] = array('relation' => 'OR', $meta_query);
+				
 				$query = apply_filters( 'wp_manga_prepare_archive_posts', $query );
 
 				$wp_query->wp_manga = new WP_Query( $query );
@@ -614,7 +675,7 @@
 				$diff = sprintf( __( '%s ago',  WP_MANGA_TEXTDOMAIN ), human_time_diff( $check, $current ) );
 			}
 
-			return $diff;
+			return apply_filters('wp_manga_get_time_diff', $diff, $time, $timestamp);
 		}
 
 		function get_html( $post_id ) {
@@ -680,21 +741,30 @@
 
 		}
 
-		function create_bookmark_link( $post_id = '', $is_manga_single = '' ) {
+		function create_bookmark_link( $post_id = '', $is_manga_single = '', $chapter_slug = '' ) {
+			
+			global $wp_manga_setting, $wp_manga_functions, $wp_manga;
+			
+			$user_bookmark = $wp_manga_setting->get_manga_option('user_bookmark', 1);
+			
+			if(!$user_bookmark) return;
 
-			global $wp_manga_functions, $wp_manga;
-
+			$reading_chapter = madara_permalink_reading_chapter();
+			
 			$output          = '';
-			$chapter         = get_query_var( 'chapter' );
+			$chapter         = $chapter_slug ? $chapter_slug : ($reading_chapter ? $reading_chapter['chapter_slug'] : '');
 			$page            = isset( $_GET[$wp_manga->manga_paged_var] ) ? $_GET[$wp_manga->manga_paged_var] : '1';
+			
 			$is_manga_single = $is_manga_single !== '' ? $is_manga_single : $wp_manga_functions->is_manga_single();
+			
+			
 
 			if ( empty( $post_id ) ) {
 				$post_id = get_the_ID();
 			}
 
 			if ( ! empty( $chapter ) ) {
-				$chapter_id = $GLOBALS['wp_manga_chapter']->get_chapter_id_by_slug( get_the_ID(), $chapter );
+				$chapter_id = $GLOBALS['wp_manga_chapter']->get_chapter_id_by_slug( $post_id, $chapter );
 			}
 			$chapter_id = ! empty( $chapter_id ) ? $chapter_id : '';
 
@@ -719,8 +789,9 @@
 
 				if ( ! empty( $bookmark_manga ) ) {
 
-					$index = array_search( $post_id, array_column( $bookmark_manga, 'id' ) );
-
+					$col = 'id';
+					$index = array_search( $post_id, array_map(function($element) use($col ){return $element[$col ];}, $bookmark_manga) );
+					
 					if ( $index !== false ) {
 
 						$is_chapter_bookmarked = ! empty( $chapter_id ) && isset( $bookmark_manga[ $index ]['c'] ) && $chapter_id == $bookmark_manga[ $index ]['c'];
@@ -728,12 +799,12 @@
 
 						if ( $is_manga_single || $is_page_bookmarked ) {
 
-							$output .= '<a class="wp-manga-delete-bookmark" href="javascript:void(0)" data-action="delete-bookmark" data-post-id="' . $post_id . '" title="' . esc_attr__('Delete Bookmark',WP_MANGA_TEXTDOMAIN) . '"><i class="ion-checkmark"></i></a>';
+							$output .= '<a class="wp-manga-delete-bookmark" href="javascript:void(0)" data-action="delete-bookmark" data-post-id="' . $post_id . '" title="' . esc_attr__('Delete Bookmark',WP_MANGA_TEXTDOMAIN) . '"><i class="icon ion-md-checkmark"></i></a>';
 
 							if ( $is_manga_single ) {
 								$output .= '</div>';
 								$output .= '<div class="action_detail">';
-								$output .= '<span>' . $total_bookmarked > 2 ? sprintf(esc_attr__( 'You bookmarked this with %d others', WP_MANGA_TEXTDOMAIN ), $total_bookmarked) : ($total_bookmarked == 2 ? esc_attr__( 'You bookmarked this with one another', WP_MANGA_TEXTDOMAIN ) : esc_attr__( 'You bookmarked this', WP_MANGA_TEXTDOMAIN )) . '</span>';
+								$output .= '<span>' . $total_bookmarked > 2 ? sprintf(esc_attr__( 'You bookmarked this with %s others', WP_MANGA_TEXTDOMAIN ), wp_manga_number_format_short($total_bookmarked)) : ($total_bookmarked == 2 ? esc_attr__( 'You bookmarked this with one another', WP_MANGA_TEXTDOMAIN ) : esc_attr__( 'You bookmarked this', WP_MANGA_TEXTDOMAIN )) . '</span>';
 								$output .= '</div>';
 							}
 
@@ -747,12 +818,12 @@
 				$output .= '<script type="text/javascript"> var requireLogin2BookMark = true; </script>';
 			}
 
-			$output .= '<a href="#" class="wp-manga-action-button" data-action="bookmark" data-post="' . $post_id . '" data-chapter="' . $chapter_id . '" data-page="' . $page . '" title="Bookmark"><i class="ion-android-bookmark"></i></a>';
+			$output .= '<a href="#" class="wp-manga-action-button" data-action="bookmark" data-post="' . $post_id . '" data-chapter="' . $chapter_id . '" data-page="' . $page . '" title="' . esc_attr__('Bookmark', WP_MANGA_TEXTDOMAIN) . '"><i class="icon ion-ios-bookmark"></i></a>';
 
 			if ( $is_manga_single ) {
 				$output .= '</div>';
 				$output .= '<div class="action_detail">';
-				$output .= '<span>' . ($total_bookmarked > 0 ? sprintf(esc_attr__( '%d Users bookmarked This', WP_MANGA_TEXTDOMAIN ), $total_bookmarked) : esc_attr__( 'Bookmark This', WP_MANGA_TEXTDOMAIN )) . '</span>';
+				$output .= '<span>' . ($total_bookmarked > 0 ? sprintf(esc_attr__( '%s Users bookmarked This', WP_MANGA_TEXTDOMAIN ), wp_manga_number_format_short($total_bookmarked)) : esc_attr__( 'Bookmark This', WP_MANGA_TEXTDOMAIN )) . '</span>';
 				$output .= '</div>';
 			}
 
@@ -775,7 +846,23 @@
 
 			$output = '<li>';
 
-			$output .= '<a href="#" class="wp-manga-edit-chapter" data-chapter="' . esc_attr( $chapter_id ) . '">' . esc_html( $chapter_name ) . $this->filter_extend_name( $chapter_name_extend ) . '</a>';
+			$output .= '<input type="checkbox" id="chapter_select_'. $chapter_id .'" value="'. $chapter_id .'" class="chapter_select_item chapter_vol_' . $c['volume_id'] . '"><a href="#" class="wp-manga-edit-chapter" data-chapter="' . esc_attr( $chapter_id ) . '">' . wp_kses_post( $chapter_name ) . $this->filter_extend_name( $chapter_name_extend );
+			
+			$status_text = '';
+			switch($c['chapter_status']){
+				case 2:
+					$status_text = ' <span class="chapter-status uploading">' . esc_html__('(uploading)', WP_MANGA_TEXTDOMAIN) . '</span>';
+					break;
+				case 1:
+					$status_text = ' <span class="chapter-status completed">' . esc_html__('(completed)', WP_MANGA_TEXTDOMAIN) . '</span>';
+					break;
+				default:
+					break;
+			}
+			
+			$status_text = apply_filters('wp_manga_chapter_status_text', $status_text, $c);
+			
+			$output .=  $status_text. '</a>';
 
 			if ( ! empty( $hosts ) ) {
 				$output .= '<span class="manga-chapter-storages">';
@@ -790,7 +877,7 @@
 
 			$output .= '<a id="wp-manga-delete-chapter" data-chapter="' . esc_attr( $chapter_id ) . '" href="javascript:void(0)" title="' . esc_html__( 'Delete Chapter', WP_MANGA_TEXTDOMAIN ) . '"><i class="ion-ios-close"></i></a>';
 
-			$output = apply_filters( 'madara_chapter_content_li_html', $output, $chapter_id );
+			$output = apply_filters( 'madara_chapter_content_li_html', $output, $chapter_id, $c );
 
 			$output .= '</li>';
 
@@ -805,12 +892,12 @@
 			}
 
 			$expanded = $is_search ? 'expanded' : '';
-
-			$output = '<ul>';
+			$output = '<p>' . esc_html__('With selected: ', WP_MANGA_TEXTDOMAIN) . '<select id="select_multi_action"><option></option><option value="delete">'.esc_html__('Delete', WP_MANGA_TEXTDOMAIN) .'</option></select><button id="btn_do_multi_action" value="'.$post_id.'">'.esc_html__('Apply', WP_MANGA_TEXTDOMAIN) .'</button></p>';
+			$output .= '<ul id="volumes-list">';
 			if ( ! empty( $chapters[0] ) ) {
 				$output .= '<li class="manga-single-volume expanded" data-volume-id="0">';
 				$output .= '<h3 class="volume-title">';
-				$output .= '<span>' . esc_html__( 'No Volume ', WP_MANGA_TEXTDOMAIN ) . '</span>';
+				$output .= '<input type="checkbox" id="vol_select_all_0" value="0" class="vol_select_all"/><span class="title">' . esc_html__( 'No Volume ', WP_MANGA_TEXTDOMAIN ) . '</span>';
 				$output .= '<div class="volume-edit">';
 				$output .= '<a href="javascript:void(0);" id="wp-manga-delete-volume" title="' . esc_html__( 'Delete Volume', WP_MANGA_TEXTDOMAIN ) . '"><i class="fa fa-times"></i></a>';
 				$output .= '</div>';
@@ -841,7 +928,7 @@
 					$output .= '<li class="manga-single-volume ' . $this_expanded . '" data-volume-id="' . esc_attr( $volume_id ) . '">';
 
 					$output .= '<h3 class="volume-title">';
-					$output .= '<span>' . $v['volume_name'] . '</span>';
+					$output .= '<input type="checkbox" id="vol_select_all_'. $volume_id .'" value="'. $volume_id .'" class="vol_select_all"/><span>' . $v['volume_name'] . '</span>';
 					$output .= '<div class="volume-edit">';
 					$output .= '<a href="javascript:void(0);" id="edit-volume-name" title="' . esc_attr__( 'Edit Volume Name', WP_MANGA_TEXTDOMAIN ) . '"><i class="fas fa-pencil-alt"></i></a>';
 					$output .= '<a href="javascript:void(0);" id="wp-manga-delete-volume" title="' . esc_attr__( 'Delete Volume', WP_MANGA_TEXTDOMAIN ) . '"><i class="fa fa-times"></i></a>';
@@ -871,46 +958,75 @@
 
 		}
 
-		function get_all_chapters( $post_id ) {
-
+		/**
+		 * @params
+		 * 		$chapter_count - int - Number of "latest chapters" returned. "Latest Chapters" order is defined by $order param
+		 *		$order - string (defined by... N/A)
+		 * 
+		 */
+		function get_all_chapters( $post_id, $order = '', $chapters_count = 0 ) {
+			
 			global $wp_manga_volume, $wp_manga_chapter, $wp_manga_storage;
 
 			$volumes = $wp_manga_volume->get_volumes( array(
-				'post_id' => $post_id
+				'post_id' => $post_id,
+				'order' => $order
 			) );
 
 			$manga_chapters = array();
+			
+			$chapters_found = 0;
 
 			if ( ! empty( $volumes ) ) {
 				foreach ( $volumes as $volume ) {
-
+					$chapters = $wp_manga_chapter->get_chapters( array(
+															'post_id'   => $post_id,
+															'volume_id' => $volume['volume_id']
+														),
+														false,
+														'',
+														$order,
+														$chapters_count
+													);
+													
 					$manga_chapters[ $volume['volume_id'] ] = array(
 						'volume_name' => $volume['volume_name'],
 						'volume_slug' => $wp_manga_storage->slugify($volume['volume_name']),
 						'date'        => $volume['date'],
 						'date_gmt'    => $volume['date_gmt'],
-						'chapters'    => $wp_manga_chapter->get_chapters( array(
-							'post_id'   => $post_id,
-							'volume_id' => $volume['volume_id']
-						) )
+						'chapters'    => $chapters
 					);
-
+					
+					// stop if we reach limit needed
+					$chapters_found += count($chapters);
+					if($chapters_count && $chapters_found >= $chapters_count){
+						break;
+					}
 				}
 			}
+			
+			if(!$chapters_count || $chapters_found < $chapters_count){
 
-			$no_volume_chapters = $wp_manga_chapter->get_chapters( array(
-				'post_id'   => $post_id,
-				'volume_id' => 0
-			) );
-
-
-			if ( $no_volume_chapters ) {
-				$manga_chapters['0'] = array(
-					'volume_name' => esc_html__( 'No Volume', WP_MANGA_TEXTDOMAIN ),
-					'date'        => '',
-					'date_gmt'    => '',
-					'chapters'    => $no_volume_chapters
+				$no_volume_chapters = $wp_manga_chapter->get_chapters( array(
+						'post_id'   => $post_id,
+						'volume_id' => 0
+					),
+					false,
+					'',
+					$order,
+					$chapters_count
 				);
+
+
+				if ( $no_volume_chapters ) {
+					$manga_chapters['0'] = array(
+						'volume_name' => esc_html__( 'No Volume', WP_MANGA_TEXTDOMAIN ),
+						'date'        => '',
+						'date_gmt'    => '',
+						'chapters'    => $no_volume_chapters
+					);
+				}
+			
 			}
 			
 			$manga_chapters = apply_filters('wp_manga_get_all_chapters', $manga_chapters, $post_id);
@@ -923,66 +1039,107 @@
 
 		}
 
-		function get_reading_style( $user_id = null ) {
+		function get_reading_style( $user_id = null, $manga_id = 0 ) {
+			global $wp_manga, $is_amp_required;
+			
+			if(isset($is_amp_required) && $is_amp_required){
+				return 'list';
+			}
+			
+			$manga_paged = get_query_var($wp_manga->manga_paged_var);
+			
+			if(!$manga_paged){
+				if ( $user_id == null && is_user_logged_in() ) {
+					$user_id = get_current_user_id();
+				}
 
-			if ( $user_id == null && is_user_logged_in() ) {
+				if ( ! empty( $user_id ) ) {
+					$user_reading_style = get_user_meta( $user_id, '_manga_reading_style', true );
+				} else {
+					$user_reading_style = ''; // this should be read from Plugin
+				}
+
+				$user_reading_style = apply_filters( 'get_reading_style', $user_reading_style, $manga_id );
+				
+				if ( empty( $user_reading_style ) ) {
+					$user_reading_style = 'paged';
+				}
+			} else {
+				return 'paged'; // if there is /p/ param, then we consider it paged reading style
+			}
+
+			return $user_reading_style;
+		}
+
+		function manga_meta( $post_id, $all_meta = 0, $count_chap = 2 ) {
+			global $wp_manga_database, $wp_manga_storage;
+			
+			$sort_setting = $wp_manga_database->get_sort_setting();
+
+			$sort_by    = $sort_setting['sortBy'];
+			$sort_order = $sort_setting['sort'];
+			
+			$user_id = null;
+			if ( is_user_logged_in() ) {
 				$user_id = get_current_user_id();
 			}
 
-			if ( ! empty( $user_id ) ) {
-				$user_reading_style = get_user_meta( $user_id, '_manga_reading_style', true );
-			}
+			$manga_reading_style = $this->get_reading_style( $user_id, $post_id );
 
-			if ( empty( $user_reading_style ) ) {
-				$user_reading_style = 'paged';
-			}
-
-			return apply_filters( 'get_reading_style', $user_reading_style );
-
-		}
-
-		function manga_meta( $post_id, $all_meta = 0 ) {
-
-			$manga_reading_style = $this->get_reading_style();
-
-			$list_chapter = $this->get_latest_chapters( $post_id, null, 2, $all_meta );
+			$list_chapter = $this->get_latest_chapters( $post_id, null, apply_filters('wp_manga_latest_chaptes_count', $count_chap), $all_meta, $sort_by, $sort_order );
 
 			if ( ! empty( $list_chapter ) ) {
+				
+				// save queried volumes to reduce call to DB
+				$vols = array();
 				foreach ( $list_chapter as $chapter ) {
+					$this_vol = false;
+					
+					if ( $chapter['volume_id'] !== '0') {
+						if(!isset($vols[$chapter['volume_id']])){ 
+							$this_vol = $GLOBALS['wp_manga_volume']->get_volume_by_id( $post_id, $chapter['volume_id'] );
+							$vols[$chapter['volume_id']] = $this_vol;
+						} else {
+							$this_vol = $vols[$chapter['volume_id']];
+						}
+						
+						if($this_vol){
+							// set volume_slug for chapter to reduce calls to DB when querying volume info.
+							$chapter['volume_slug'] = $wp_manga_storage->slugify( $this_vol['volume_name'] );
+						}
+					}
+					
 					$c_url = $this->build_chapter_url( $post_id, $chapter, $manga_reading_style );
 
 					?>
-                    <div class="chapter-item">
+                    <div class="chapter-item <?php echo apply_filters('wp_manga_chapter_item_class', '', $chapter, $post_id);?>">
 
 						<?php if ( isset( $chapter['chapter_name'] ) ) { ?>
-                            <span class="chapter font-meta">
-							<a href="<?php echo esc_attr( $c_url ); ?>"> <?php echo esc_html( $chapter['chapter_name'] ); ?> </a>
+                        <span class="chapter font-meta">
+							<a href="<?php echo esc_attr( $c_url ); ?>" class="btn-link"> <?php echo wp_kses_post( $chapter['chapter_name'] ); ?> </a>
 						</span>
 						<?php } ?>
-						<?php
-							if ( $chapter['volume_id'] !== '0' ) {
-								$this_vol = $GLOBALS['wp_manga_volume']->get_volume_by_id( $post_id, $chapter['volume_id'] );
-								?><?php if ( $this_vol !== false ) { ?>
-                                    <span class="vol font-meta">
-										<a href="<?php echo esc_attr( $c_url ); ?>"> <?php echo $this_vol['volume_name']; ?> </a>
-									</span>
-								<?php }
+						
+						<?php if ( $this_vol !== false ) { ?>
+							<span class="vol font-meta">
+								<a href="<?php echo esc_attr( $c_url ); ?>"> <?php echo $this_vol['volume_name']; ?> </a>
+							</span>
+						<?php }
+
+						if ( ! empty( $chapter['date'] ) ) {
+							$time_diff = $this->get_time_diff( $chapter['date'] );
+
+							if ( $time_diff ) {
+
+								$time_diff = apply_filters( 'madara_archive_chapter_date', $time_diff, $chapter['chapter_id'], $chapter['date'], $c_url );
+
+								?>
+								<span class="post-on font-meta">
+									<?php echo wp_kses_post( $time_diff ); ?>
+								</span>
+								<?php
 							}
-
-							if ( ! empty( $chapter['date'] ) ) {
-								$time_diff = $this->get_time_diff( $chapter['date'] );
-
-								if ( $time_diff ) {
-
-									$time_diff = apply_filters( 'madara_archive_chapter_date', $time_diff, $chapter['chapter_id'], $chapter['date'], $c_url );
-
-									?>
-                                    <span class="post-on font-meta">
-                                        <?php echo wp_kses_post( $time_diff ); ?>
-                                    </span>
-									<?php
-								}
-							}
+						}
 						?>
                     </div>
 					<?php
@@ -996,10 +1153,14 @@
 			$orderby = 'name',
 			$order = 'desc'
 		) {
+			$user_id = null;
+			if ( is_user_logged_in() ) {
+				$user_id = get_current_user_id();
+			}
 
-			$manga_reading_style = $this->get_reading_style();
+			$manga_reading_style = $this->get_reading_style( $user_id, $post_id );
 
-			$list_chapter = $this->get_latest_chapters( $post_id, null, 2, $all_meta, $orderby, $order );
+			$list_chapter = $this->get_latest_chapters( $post_id, null, 0, $all_meta, $orderby, $order );
 
 			echo '<div class="row c-row">';
 
@@ -1071,6 +1232,60 @@
 				return get_post_type_archive_link( 'wp-manga' );
 			}
 		}
+        
+        /**
+         * Get list of bookmarked mangas by an User
+         *
+         * @param int $user_id      ID of user
+         * @param string $order     by default, bookmarked items are ordered by the time it is added to the list. Use 'update' to order items by manga's Latest Updated time   
+         *
+         * @return array Array of bookmark object
+                                array(
+                                    'id'       => Post ID,
+                                    'c'        => Chapter ID,
+                                    'p'        => Chapter Page, (current reading page in a chapter),
+                                    'unread_c' => [], // number of unread chapter - obsolete,
+                                    'post' => WP_POST object
+                                );
+         */
+        function get_bookmarked_mangas($user_id, $order = ''){
+            $bookmarks     = get_user_meta( $user_id, '_wp_manga_bookmark', true );
+            
+            if($bookmarks){                
+                if($order == 'update'){
+                    $args = array('orderby' => 'latest', 'post__in' => array_column( $bookmarks, 'id'));
+                } else {
+                    $args = array('orderby' => 'post__in', 'post__in' => array_column( $bookmarks, 'id'));
+                }
+                
+                global $wp_manga;
+                
+                $myquery = $wp_manga->mangabooth_manga_query( $args );
+                                    
+                if($myquery->have_posts()){
+                    $mangas = $myquery->posts;
+                    
+                    $ordered_bookmarks = array();
+                    
+                    foreach($mangas as $manga){
+                        foreach($bookmarks as $bookmark){
+                            if($bookmark['id'] == $manga->ID){
+                                $item = $bookmark;
+                                $item['post'] = $manga; // save for later use
+                                $ordered_bookmarks[] = $item;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    return array_reverse($ordered_bookmarks);
+                }
+                
+                return $bookmarks;
+            }
+            
+            return array();
+        }
 
 		function is_manga_archive_front_page() {
 
@@ -1130,22 +1345,31 @@
 			return false;
 		}
 
-		function is_manga_single() {
+		function is_manga_single( $manga_id = 0) {
 
 			if ( is_singular( 'wp-manga' ) && ! $this->is_manga_reading_page() ) {
-				return true;
+				
+				if($manga_id == 0){
+					return true;
+				} elseif($manga_id == get_the_ID()){
+					return true;
+				}
 			}
 
 			return false;
 		}
 
-		function is_manga_reading_page() {
+		// used when loading page. not in a ajax call
+		function is_manga_reading_page( $chapter_slug = '', $manga_id = 0) {
 
 			if ( ! is_singular( 'wp-manga' ) ) {
 				return false;
 			}
-
-			if ( get_query_var( 'chapter' ) !== '' ) {
+			
+			$current_manga_id = get_the_ID();
+			$reading_chapter = madara_permalink_reading_chapter();
+			
+			if ( ($chapter_slug == '' && $reading_chapter) || ($chapter_slug != '' && $reading_chapter && $reading_chapter['chapter_slug'] == $chapter_slug && $current_manga_id == $manga_id) ) {
 				return true;
 			}
 
@@ -1154,11 +1378,13 @@
 
 		function is_manga_archive() {
 
+			$is_manga_archive = false;
+
 			if ( is_tax( 'wp-manga-genre' ) || is_tax( 'wp-manga-release' ) || is_tax( 'wp-manga-tag' ) || is_tax( 'wp-manga-author' ) || is_tax( 'wp-manga-artist' ) || $this->is_manga_posttype_archive() ) {
-				return true;
+				$is_manga_archive = true;
 			}
 
-			return false;
+			return apply_filters( 'is_manga_archive', $is_manga_archive );
 
 		}
 
@@ -1194,8 +1420,8 @@
 			}
 
 			if ( $chapters ) {
-
-				$chapters_slug = array_column( $chapters, 'chapter_slug' );
+				$col = 'chapter_slug';
+				$chapters_slug = array_map(function($element) use($col ){return $element[$col ];}, $chapters);
 
 				$i = 0;
 
@@ -1226,8 +1452,8 @@
 			);
 
 			$chapters = $wp_manga_chapter->get_chapters( $args );
-
-			$chapters_slug = array_column( $chapters, 'chapter_slug' );
+			$col = 'chapter_slug';
+			$chapters_slug = array_map(function($element) use($col ){return $element[$col ];}, $chapters);
 			$slugified     = $wp_manga_storage->slugify( $c_name );
 
 			if ( $chapters ) {
@@ -1238,8 +1464,8 @@
 					$i ++;
 					$new_slugified = $slugified . '_' . $i;
 				} while ( in_array( $new_slugified, $chapters_slug ) );
-
-				if ( ! in_array( $volume, array_column( $chapters, 'volume_id' ) ) ) {
+				$col = 'volume_id';
+				if ( ! in_array( $volume, array_map(function($element) use($col ){return $element[$col ];}, $chapters) ) ) {
 					return array( 'c_uniq_slug' => $new_slugified, 'overwrite' => false );
 				}
 
@@ -1316,19 +1542,31 @@
 			return $chapter['chapter_name'] . $this->filter_extend_name( $chapter['chapter_name_extend'] );
 
 		}
+		
+		function get_chapter_by_slug( $post_id, $chapter_slug ){
+			global $wp_manga, $wp_manga_chapter;
+            
+            $chapter = $wp_manga->get_loaded_chapter_by_slug( $post_id, $chapter_slug );
+			if(!$chapter){
+				$chapter = $wp_manga_chapter->get_chapter_by_slug( $post_id, $chapter_slug );
+                
+                $wp_manga->cache_chapter_data($post_id, $chapter_slug, $chapter);
+                
+			}
+			
+			return $chapter;
+		}
 
 		/**
-		 * $chapter_slug - array (DB row) of chapter or Chapter Slug (string)
+		 * $chapter_slug - array (DB row) of chapter (preferred for better performance) or Chapter Slug (string)
 		 **/
 		function build_chapter_url( $post_id, $chapter_slug, $page_style = null, $host = null, $paged = null ) {
-
 			global $wp_manga_chapter, $wp_manga_volume, $wp_manga_storage, $wp_manga;
-
 			if(is_array($chapter_slug)){
 				$chapter = $chapter_slug;
 				$chapter_slug = $chapter['chapter_slug'];
 			} else {
-				$chapter = $wp_manga_chapter->get_chapter_by_slug( $post_id, $chapter_slug );
+				$chapter = $this->get_chapter_by_slug($post_id, $chapter_slug);//$wp_manga_chapter->get_chapter_by_slug( $post_id, $chapter_slug );
 			}
 
 			$url = get_the_permalink( $post_id );
@@ -1377,6 +1615,16 @@
 			}
 
 			//if permalink structure is ?p= or the post haven't be published yet, then use normal query url
+			/*
+			$options = get_option( 'wp_manga_settings', array() );
+			$chapter_slug_or_id = isset( $options['chapter_slug_or_id'] ) ? $options['chapter_slug_or_id'] : 'slug';
+			
+			if ( ! $is_slug_structure ) {
+				$url = add_query_arg( array( 'chapter' => $chapter_slug_or_id == 'slug' ? $chapter_slug : $chapter['chapter_id'] ), $url );
+			} else {
+				$url .= '/' . ($chapter_slug_or_id == 'slug' ? $chapter_slug : $chapter['chapter_id']);
+			}
+			*/
 			if ( ! $is_slug_structure ) {
 				$url = add_query_arg( array( 'chapter' => $chapter_slug ), $url );
 			} else {
@@ -1385,24 +1633,42 @@
 
 			//remove page style if it's not manga chapter
 			$chapter_type = get_post_meta( $post_id, '_wp_manga_chapter_type', true );
-
+			
 			if ( $page_style && $chapter_type != 'text' && $chapter_type != 'video' ) {
-				$addition_params['style'] = $page_style;
+				// if $page_style != user setting, then we don't need param
+				$user_id = null;
+				if ( is_user_logged_in() ) {
+					$user_id = get_current_user_id();
+				}
+				
+				if($page_style != $this->get_reading_style( $user_id, $post_id )){
+					$addition_params['style'] = $page_style;
+				}
 			}
 
 			if ( $chapter_type != 'text' && $chapter_type != 'video' && $host ) {
 				$addition_params['host'] = $host;
 			}
-
-			if ( $paged && $page_style != 'list' ) {
-				$addition_params[$wp_manga->manga_paged_var] = $paged;
+			
+			
+			if($page_style != 'list' && ($chapter_type == 'manga' || $chapter_type == '')){
+				if ( $paged && $paged > 1 ) {
+					$url .= '/p/' . $paged . '/';
+					
+					if(! empty( $addition_params )) {
+						unset($addition_params['style']);
+					}
+					
+				}
 			}
-
+			
+			$url = trim($url, '/') . '/';
+			
 			if ( ! empty( $addition_params ) ) {
 				$url = add_query_arg( $addition_params, $url );
 			}
-
-			return $url;
+			
+			return apply_filters('wp_manga-chapter-url', $url, $post_id, $chapter, $page_style, $host, $paged);
 
 		}
 
@@ -1515,7 +1781,8 @@
 			$results = $wp_manga_chapter_data->select( array( 'chapter_id' => $chapter_id ), array( 'storage' ) );
 
 			if( !empty( $results ) ){
-				return array_column( $results, 'storage' );
+				$col = 'storage';
+				return array_map(function($element) use($col ){return $element[$col ];}, $results);
 			}
 
 			return false;
@@ -1538,7 +1805,43 @@
 			return false;
 
 		}
-
+		
+		/**
+		 * $key = 'manga_unique_id';
+		 **/
+		function get_manga_by($key, $value){
+			$args = array();
+			if($key == 'manga_unique_id'){
+				$args = array(
+					'post_type' => 'wp-manga',
+				   'meta_query' => array(
+					   array(
+						   'key' => 'manga_unique_id',
+						   'value' => $value,
+						   'compare' => '=',
+					   )
+				   )
+				);
+			}
+			
+			if(count($args) > 0){
+				$query = new WP_Query($args);
+				if($query->have_posts()){
+					
+					return $query->get_posts();
+				}
+			}
+		}
+		
+		public static function get_validated_image_extensions(){
+			return apply_filters('wp_manga_validate_image_extensions', array( 'jpg', 'jpeg', 'bmp', 'png', 'gif', 'webp' ));
+		}
+		
+		function upload_mime_types( $mime_types ) {
+			$mime_types['webp'] = 'image/webp';
+		  
+			return $mime_types;
+		}
 	}
 
 	$GLOBALS['wp_manga_functions'] = new WP_MANGA_FUNCTIONS();

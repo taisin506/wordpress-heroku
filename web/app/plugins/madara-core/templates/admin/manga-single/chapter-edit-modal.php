@@ -27,10 +27,13 @@
 
             <div class="wp-manga-modal-header">
                 <input type="text" id="wp-manga-modal-chapter-name" value="" name="wp-manga-modal-chapter-name"
-                       placeholder="Chapter Name">
+                       placeholder="<?php esc_html_e('Chapter Name', WP_MANGA_TEXTDOMAIN);?>">
                 <span>-</span>
                 <input type="text" id="wp-manga-modal-chapter-extend-name" value=""
-                       name="wp-manga-modal-chapter-extend-name" placeholder="Chapter Extend Name">
+                       name="wp-manga-modal-chapter-extend-name" placeholder="<?php esc_html_e('Chapter Extend Name', WP_MANGA_TEXTDOMAIN);?>">
+				<span>-</span>
+				<input type="text" id="wp-manga-modal-chapter-index" style="width:140px" value=""
+                       name="wp-manga-modal-chapter-index" placeholder="<?php esc_html_e('Custom Index', WP_MANGA_TEXTDOMAIN);?>">
 
 				<?php do_action( 'madara_chapter_modal_header', $chapter_type, $post->ID ); ?>
 
@@ -41,20 +44,78 @@
 				<?php do_action( 'madara_chapter_modal_before_content', $chapter_type, $post->ID ); ?>
 
 				<?php do_action( 'madara_chapter_modal_before_chapter_meta', $chapter_type, $post->ID ); ?>
+				
+				<div class="wp-manga-modal-status block">
+                    <label class="input-label"><strong><?php esc_html_e( 'Status: ', WP_MANGA_TEXTDOMAIN ); ?></strong></label>
 
-                <div class="wp-manga-modal-storage">
-                    <strong><?php esc_html_e( 'Storage: ', WP_MANGA_TEXTDOMAIN ); ?></strong>
-                    <select id="manga-storage-dropdown">
+					<select name="chapter_status" id="chapter_status">
+						<option value="1"><?php esc_html_e('Completed', WP_MANGA_TEXTDOMAIN);?></option>
+						<option value="2"><?php esc_html_e('Uploading', WP_MANGA_TEXTDOMAIN);?></option>
+						<?php do_action('wp_manga_chapter_status_options');?>
+					</select>
 
-                    </select>
                 </div>
-                <div class="wp-manga-modal-volume">
-                    <strong><?php esc_html_e( 'Volume: ', WP_MANGA_TEXTDOMAIN ); ?></strong>
+				
+				<div class="wp-manga-modal-seo-desc block">
+                    <label class="input-label"><strong><?php esc_html_e( 'Chapter SEO Description: ', WP_MANGA_TEXTDOMAIN ); ?></strong></label>
+
+					<textarea cols="50" id="manga-seo-desc"></textarea>
+
+                </div>
+				
+				<div class="wp-manga-modal-warning-text block">
+                    <label class="input-label"><strong><?php esc_html_e( 'Chapter warning text: ', WP_MANGA_TEXTDOMAIN ); ?></strong></label>
+
+					<textarea cols="50" id="manga-warning-text"></textarea>
+
+                </div>
+				
+				<?php if($chapter_type != 'manga'){?>
+				<div class="wp-manga-modal-volume block">
+					<label class="input-label"><strong><?php esc_html_e( 'Volume: ', WP_MANGA_TEXTDOMAIN ); ?></strong></label>
 
 					<?php $GLOBALS[ 'wp_manga_functions' ]->volume_dropdown( get_the_ID(), 'manga-volume-dropdown' ) ?>
 
-                </div>
+				</div>
+				<?php }?>
+				
+				<table>
+					<tr>
+						<td>
+							<div class="wp-manga-modal-storage block">
+								<label class="input-label"><strong><?php esc_html_e( 'Storage: ', WP_MANGA_TEXTDOMAIN ); ?></strong></label>
+								<select id="manga-storage-dropdown">
 
+								</select>
+								<a href="#" id="remove-storage-btn" style="display:none"> <?php esc_html_e( 'Remove this storage', WP_MANGA_TEXTDOMAIN ); ?></a>
+							</div>
+							<?php if($chapter_type == 'manga'){?>
+							<div class="wp-manga-modal-volume block">
+								<label class="input-label"><strong><?php esc_html_e( 'Volume: ', WP_MANGA_TEXTDOMAIN ); ?></strong></label>
+
+								<?php $GLOBALS[ 'wp_manga_functions' ]->volume_dropdown( get_the_ID(), 'manga-volume-dropdown' ) ?>
+
+							</div>
+							<?php }?>
+						</td>
+						<td>
+							<div id="chapter-upload-more">
+							<h3><?php esc_html_e('Upload images', WP_MANGA_TEXTDOMAIN);?></h3>
+							<input type="file" id="chapter_upload_images"/> 
+							<p>
+								<label for="chapter_upload_images"><?php esc_html_e('Upload more images to this chapter. A single image or a zip file is accepted',WP_MANGA_TEXTDOMAIN);?>
+							</p>
+							<p>
+								<button id="btn_upload_chapter_images">
+									<?php esc_html_e('Upload', WP_MANGA_TEXTDOMAIN);?> <span class="loading" style="display:none"><i class="fas fa-spinner fa-spin"></i></span>
+								</button>
+							</p>
+							<span id="upload_chapter_images_message" class="message error"></span>
+							</div>
+						</td>
+					</tr>
+				</table>
+				
 				<?php do_action( 'madara_chapter_modal_after_chapter_meta', $chapter_type, $post->ID ); ?>
 
                 <div class="description">
@@ -66,8 +127,10 @@
                 <ul id="manga-sortable"></ul>
 
                 <div class="wp-manga-chapter-content-editor">
+					<?php if($chapter_type == 'video') {?>
 					<h4><?php esc_html_e('To enable multiple servers, use this format in the content',WP_MANGA_TEXTDOMAIN);?></h4>
 					<h5><?php esc_html_e('SERVER 1 NAME :: CONTENT 1 || SERVER 2 NAME :: CONTENT',WP_MANGA_TEXTDOMAIN);?></h5>
+					<?php }?>
                     <!-- content editor for text -->
 					<?php wp_editor( '', 'wp-manga-chapter-content-wp-editor', array( 'editor_height' => 350 ) ); ?>
                 </div>
@@ -81,7 +144,7 @@
                 <input type="hidden" id="wp-manga-modal-post-id" value="">
                 <input type="hidden" id="wp-manga-modal-chapter" value="">
                 <div class="duplicate-chapter" style="display:none;">
-                    <span> <?php echo esc_html__( 'Duplicate to : ' ) ?> </span>
+                    <span> <?php echo esc_html__( 'Duplicate to : ', WP_MANGA_TEXTDOMAIN ) ?> </span>
                     <select name="duplicate-server" id="duplicate-server"> </select>
                     <button id="duplicate-btn" type="button"
                             class="button"> <?php esc_html_e( 'Duplicate', WP_MANGA_TEXTDOMAIN ); ?></button>

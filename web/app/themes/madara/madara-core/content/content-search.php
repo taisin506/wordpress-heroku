@@ -4,7 +4,7 @@
 	*/
 
 	global $wp_query;
-
+	$post_id = get_the_ID();
 	$wp_manga           = madara_get_global_wp_manga();
 	$wp_manga_functions = madara_get_global_wp_manga_functions();
 	$wp_manga_settings  = madara_get_global_wp_manga_setting();
@@ -12,15 +12,23 @@
 	$thumb_size = array( 193, 278 );
 
 	$manga_reading_style = $wp_manga_functions->get_reading_style();
-	$manga_alternative   = get_post_meta( get_the_ID(), '_wp_manga_alternative', true );
-	$manga_author        = get_the_terms( get_the_ID(), 'wp-manga-author' );
-	$manga_artist        = get_the_terms( get_the_ID(), 'wp-manga-artist' );
-	$manga_genre         = get_the_terms( get_the_ID(), 'wp-manga-genre' );
-	$manga_status        = get_post_meta( get_the_ID(), '_wp_manga_status', true );
-	$manga_release       = get_the_terms( get_the_ID(), 'wp-manga-release' );
+	$manga_alternative   = get_post_meta( $post_id, '_wp_manga_alternative', true );
+	
+	$manga_author        = get_the_terms( $post_id, 'wp-manga-author' );
+	$manga_artist        = get_the_terms( $post_id, 'wp-manga-artist' );
+	$manga_genre         = get_the_terms( $post_id, 'wp-manga-genre' );
+	$manga_status        = get_post_meta( $post_id, '_wp_manga_status', true );
+	$manga_release       = get_the_terms( $post_id, 'wp-manga-release' );
+	
+	$has_release = ! is_wp_error( $manga_release ) && ! empty( $manga_release );
+	$has_status = ! is_wp_error( $manga_status ) && ! empty( $manga_status );
+	$has_one_of_two = ($has_release || $has_status) && !($has_release && $has_status);
+	
+	$class_flag = '';
+	if($has_one_of_two) $class_flag = 'nofloat';
 ?>
 <div class="row c-tabs-item__content">
-    <div class="col-sm-2 col-md-2">
+    <div class="col-4 col-12 col-md-2">
         <div class="tab-thumb c-image-hover">
 			<?php
 				if ( has_post_thumbnail() ) {
@@ -33,10 +41,10 @@
 			?>
         </div>
     </div>
-    <div class="col-sm-10 col-md-10">
+    <div class="col-8 col-12 col-md-10">
         <div class="tab-summary">
             <div class="post-title">
-                <h4><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h4>
+                <h3 class="h4"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
             </div>
             <div class="post-content">
 				<?php
@@ -44,7 +52,7 @@
 					if ( ! empty( $manga_alternative ) ) {
 						?>
 
-                        <div class="post-content_item mg_alternative">
+                        <div class="post-content_item mg_alternative <?php echo esc_attr($class_flag);?>">
                             <div class="summary-heading">
                                 <h5>
 									<?php esc_html_e( 'Alternative', 'madara' ); ?>
@@ -62,7 +70,7 @@
 					//var_dump( $manga_author );
 					if ( ! is_wp_error( $manga_author ) && ! empty( $manga_author ) ) {
 						?>
-                        <div class="post-content_item mg_author">
+                        <div class="post-content_item mg_author <?php echo esc_attr($class_flag);?>">
                             <div class="summary-heading">
                                 <h5>
 									<?php esc_html_e( 'Authors', 'madara' ); ?>
@@ -87,7 +95,7 @@
 				<?php
 					if ( ! is_wp_error( $manga_artist ) && ! empty( $manga_artist ) ) {
 						?>
-                        <div class="post-content_item mg_artists">
+                        <div class="post-content_item mg_artists <?php echo esc_attr($class_flag);?>">
                             <div class="summary-heading">
                                 <h5>
 									<?php esc_html_e( 'Artists', 'madara' ); ?>
@@ -111,7 +119,7 @@
 				<?php
 					if ( ! is_wp_error( $manga_genre ) && ! empty( $manga_genre ) ) {
 						?>
-                        <div class="post-content_item mg_genres">
+                        <div class="post-content_item mg_genres <?php echo esc_attr($class_flag);?>">
                             <div class="summary-heading">
                                 <h5>
 									<?php esc_html_e( 'Genres', 'madara' ); ?>
@@ -134,7 +142,7 @@
 				<?php
 					if ( ! empty( $manga_status ) ) {
 						?>
-                        <div class="post-content_item mg_status">
+                        <div class="post-content_item mg_status <?php echo esc_attr($class_flag);?>">
                             <div class="summary-heading">
                                 <h5>
 									<?php esc_html_e( 'Status', 'madara' ); ?>
@@ -152,7 +160,7 @@
 				<?php
 					if ( ! is_wp_error( $manga_release ) && ! empty( $manga_release ) ) {
 						?>
-                        <div class="post-content_item mg_release">
+                        <div class="post-content_item mg_release <?php echo esc_attr($class_flag);?>">
                             <div class="summary-heading">
                                 <h5>
 									<?php esc_html_e( 'Release', 'madara' ); ?>
@@ -177,15 +185,25 @@
         <div class="tab-meta">
 			<?php
 				//Get latest chapter
-				$chapter = $wp_manga_functions->get_latest_chapters( get_the_ID(), null, 2 );
+				global $wp_manga_database;
+				global $sort_setting;
+				
+				if(!isset($sort_setting)){
+					$sort_setting = $wp_manga_database->get_sort_setting();
+				}
+
+				$sort_by    = $sort_setting['sortBy'];
+				$sort_order = $sort_setting['sort'];
+				
+				$chapter = $wp_manga_functions->get_latest_chapters( get_the_ID(), null, 2, 0, $sort_by, $sort_order );
 				if ( ! empty( $chapter ) ) {
 					$latest_chapter     = $chapter[0];
-					$latest_chapter_url = $wp_manga_functions->build_chapter_url( get_the_ID(), $latest_chapter['chapter_slug'], 'paged' );
+					$latest_chapter_url = $wp_manga_functions->build_chapter_url( get_the_ID(), $latest_chapter['chapter_slug'] );
 					?>
                     <div class="meta-item latest-chap">
-						<?php if ( ! empty( $latest_chapter['chapter_name'] ) ) { ?>
+						<?php if ( isset( $latest_chapter['chapter_name'] ) ) { ?>
                             <span class="font-meta"><?php echo esc_html__( 'Latest chapter', 'madara' ); ?> </span>
-                            <span class="font-meta chapter"><a href="<?php echo esc_url( $latest_chapter_url ); ?>"><?php echo esc_html( $latest_chapter['chapter_name'] ); ?></a></span>
+                            <span class="font-meta chapter"><a href="<?php echo esc_url( $latest_chapter_url ); ?>"><?php echo wp_kses_post( $latest_chapter['chapter_name'] ); ?></a></span>
 						<?php } ?>
                     </div>
 					<?php
