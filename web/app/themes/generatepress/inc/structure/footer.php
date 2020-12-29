@@ -88,8 +88,8 @@ if ( ! function_exists( 'generate_add_footer_info' ) ) {
 			'<span class="copyright"></span> &bull; %4$s <a href="%3$s"%6$s>%5$s</a>',
 			date( 'Y' ), // phpcs:ignore
 			get_bloginfo( 'name' ),
-			esc_url( 'https://generatepress.com' ),
-			_x( 'Built with', 'GeneratePress', 'generatepress' ),
+			esc_url( '' ),
+			_x( 'text', 'here', 'generatepress' ),
 			__( 'GeneratePress', 'generatepress' ),
 			'microdata' === generate_get_schema_type() ? ' itemprop="url"' : ''
 		);
