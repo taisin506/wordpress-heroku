@@ -90,7 +90,7 @@ if ( ! function_exists( 'generate_add_footer_info' ) ) {
 			get_bloginfo( 'name' ),
 			esc_url( '' ),
 			_x( 'text', 'here', 'generatepress' ),
-			__( 'GeneratePress', 'generatepress' ),
+			__( '', 'generatepress' ),
 			'microdata' === generate_get_schema_type() ? ' itemprop="url"' : ''
 		);
 
