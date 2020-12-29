@@ -89,7 +89,7 @@ if ( ! function_exists( 'generate_add_footer_info' ) ) {
 			date( 'Y' ), // phpcs:ignore
 			get_bloginfo( 'name' ),
 			esc_url( 'https://generatepress.com' ),
-			_x( 'All characters on this site are 18+. It's drawn material, even if they don't look like it, they are all 18+. Please report any concerns you might have here.', 'GeneratePress', 'generatepress' ),
+			_x( 'Built with', 'GeneratePress', 'generatepress' ),
 			__( 'GeneratePress', 'generatepress' ),
 			'microdata' === generate_get_schema_type() ? ' itemprop="url"' : ''
 		);
