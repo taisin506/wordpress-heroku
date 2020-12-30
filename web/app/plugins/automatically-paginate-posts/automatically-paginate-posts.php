@@ -290,7 +290,7 @@ class Automatically_Paginate_Posts {
 			return 0;
 		}
 
-		return max( $num_words, apply_filters( 'autopaging_min_num_words', 10 ) );
+		return max( $num_words, apply_filters( 'autopaging_min_num_words', 1 ) );
 	}
 
 	/**
